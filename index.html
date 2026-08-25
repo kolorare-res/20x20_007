@@ -3,73 +3,87 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Altrove - Labirinto Tipografico WebAR</title>
+  <title>Altrove - WebAR Poetico</title>
 
-  <!-- Librerie A-Frame, MindAR e Text Geometry per lettere 3D -->
+  <!-- A-Frame, MindAR e Text Geometry -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
+    body { margin: 0; overflow: hidden; }
   </style>
 
   <script>
-    // Componente personalizzato per generare il Labirinto Tipografico con Ombre Dinamiche
-    AFRAME.registerComponent('typographic-labyrinth', {
+    // 1. GENERATORE TATTILITÀ CARTA PROCEDURALE
+    AFRAME.registerComponent('paper-material', {
+      schema: {
+        color: { type: 'color', default: '#f5f0eb' }
+      },
+      init: function () {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        // Base avorio/carta
+        ctx.fillStyle = this.data.color;
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Fibra e grana della carta
+        const imgData = ctx.getImageData(0, 0, 512, 512);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const noise = (Math.random() - 0.5) * 14;
+          data[i]     = Math.min(255, Math.max(0, data[i] + noise));
+          data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+          data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        
+        this.el.addEventListener('loaded', () => {
+          const mesh = this.el.getObject3D('mesh');
+          if (mesh) {
+            mesh.material = new THREE.MeshStandardMaterial({
+              map: texture,
+              roughness: 0.9,
+              metalness: 0.05,
+              side: THREE.DoubleSide
+            });
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+          }
+        });
+      }
+    });
+
+    // 2. COMPONENTE PER FRASETTE POETICHE SULLE PARETI
+    AFRAME.registerComponent('poetic-phrases', {
       init: function () {
         const el = this.el;
-        // Font standard Three.js caricato da CDN
-        const fontUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/fonts/helvetiker_bold.typeface.json';
+        // URL FONT AFFIDABILE E FUNZIONANTE (CDN A-Frame Ufficiale)
+        const fontUrl = 'https://cdn.aframe.io/fonts/Roboto-msdf.json';
 
-        // Struttura delle frasi nel labirinto (testo, posizione X Y Z, rotazione X Y Z, colore)
-        const labirintoData = [
-          // Livello Alto (Z = -0.15) - Travi orizzontali
-          { text: "LA LETTURA E' UN PORTALE", pos: "-0.4 0.25 -0.15", rot: "0 0 0", size: 0.035, depth: 0.015, color: "#FFFFFF" },
-          { text: "EVADERE DALLA REALTA'", pos: "-0.38 -0.25 -0.18", rot: "0 0 0", size: 0.035, depth: 0.015, color: "#E6E6FA" },
-
-          // Livello Medio (Z = -0.3) - Pareti verticali in profondità
-          { text: "SPAZI INFINITI NEL TESTO", pos: "-0.28 0.4 -0.1", rot: "90 90 0", size: 0.03, depth: 0.01, color: "#B0C4DE" },
-          { text: "ABITARE ALTRE VITE", pos: "0.25 0.4 -0.15", rot: "90 90 0", size: 0.03, depth: 0.01, color: "#ADD8E6" },
-
-          // Traversa diagonale interna (Z = -0.4)
-          { text: "PAGINE SENZA CONFINE", pos: "-0.35 0 -0.38", rot: "0 0 15", size: 0.028, depth: 0.01, color: "#F0F8FF" }
+        const frasi = [
+          { text: "LA LETTURA E' UN PORTALE", pos: "0 0.28 -0.2", rot: "0 0 0", size: 0.04 },
+          { text: "SPAZI INFINITI NEL TESTO", pos: "-0.3 0 -0.3", rot: "0 0 90", size: 0.035 },
+          { text: "ABITARE ALTRE VITE", pos: "0.3 0 -0.3", rot: "0 0 -90", size: 0.035 },
+          { text: "EVADERE DALLA REALTA'", pos: "0 -0.28 -0.2", rot: "0 0 0", size: 0.04 }
         ];
 
-        // Generazione automatica dei blocchi di testo 3D
-        labirintoData.forEach((item) => {
+        frasi.forEach((item) => {
           const textEl = document.createElement('a-entity');
-
-          textEl.setAttribute('text-geometry', {
+          textEl.setAttribute('text', {
             value: item.text,
-            size: item.size,
-            height: item.depth,
-            font: fontUrl
+            align: 'center',
+            color: '#5c4d41',
+            font: fontUrl,
+            width: 1.2
           });
-
           textEl.setAttribute('position', item.pos);
           textEl.setAttribute('rotation', item.rot);
-          textEl.setAttribute('material', {
-            color: item.color,
-            roughness: 0.3,
-            metalness: 0.2
-          });
-
-          // Attivazione esplicita delle ombre A-Frame / Three.js
-          textEl.setAttribute('shadow', 'cast: true; receive: true');
-
-          // Assicura che il mesh Three.js sottostante applichi correttamente cast/receive
-          textEl.addEventListener('model-loaded', () => {
-            const mesh = textEl.getObject3D('mesh');
-            if (mesh) {
-              mesh.castShadow = true;
-              mesh.receiveShadow = true;
-            }
-          });
-
           el.appendChild(textEl);
         });
       }
@@ -78,7 +92,6 @@
 </head>
 
 <body>
-  <!-- SCENA A-FRAME con Configurazione Renderer Ombre Morbide (PCFSoftShadowMap) -->
   <a-scene 
     mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/examples/image-tracking/assets/card-example/card.mind;" 
     color-space="sRGB" 
@@ -88,57 +101,68 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- SYSTEMA LUCI PER PROIEZIONE OMBRE -->
-    <!-- 1. Luce Ambientale di base (scura per accentuare i contrasti) -->
-    <a-light type="ambient" color="#111122" intensity="0.5"></a-light>
-
-    <!-- 2. Luce Direzionale inclinata che spara verso l'interno della scatola -->
-    <a-light 
-      type="directional" 
-      color="#FFFFFF" 
-      intensity="2.2" 
-      position="0.8 1.5 0.6" 
-      target="#box-target"
-      light="castShadow: true; 
-             shadowCameraTop: 0.8; 
-             shadowCameraBottom: -0.8; 
-             shadowCameraLeft: -0.8; 
-             shadowCameraRight: 0.8; 
-             shadowMapWidth: 2048; 
-             shadowMapHeight: 2048; 
-             shadowBias: -0.0005;">
-    </a-light>
-
-    <!-- 3. Punto Luce interno (effetti di illuminazione dal fondo "ALTROVE") -->
-    <a-light type="point" color="#00FFFF" intensity="1.2" distance="0.8" position="0 0 -0.55"></a-light>
-
-    <!-- TARGET AR -->
     <a-entity mindar-image-target="targetIndex: 0">
-      
-      <!-- Target di puntamento per la luce direzionale -->
-      <a-entity id="box-target" position="0 0 -0.3"></a-entity>
 
-      <!-- SCATOLA PROFONDA / POZZO PROSPETTICO (1.0x1.0m = 20x20cm nel target) -->
-      <!-- 'receive: true' riceve le ombre proiettate dal testo 3D -->
+      <!-- ================= AMBIENTAZIONE LUCE CALDA E MORBIDA ================= -->
+      <!-- Luce d'ambiente color pesca/miele -->
+      <a-light type="ambient" color="#ffefe0" intensity="0.7"></a-light>
+
+      <!-- Luce direzionale per proiettare le ombre dei fogli di carta -->
+      <a-light 
+        type="directional" 
+        color="#fff4e6" 
+        intensity="1.5" 
+        position="0.5 1.2 0.8" 
+        light="castShadow: true; shadowMapWidth: 1024; shadowMapHeight: 1024; shadowBias: -0.001">
+      </a-light>
+
+      <!-- Spot luminoso caldo sul fondo del pozzo -->
+      <a-light type="point" color="#ffaa55" intensity="0.8" position="0 0 -0.5" distance="0.8"></a-light>
+
+
+      <!-- ================= SCATOLA/CAMERA IN CARTA SCURA (SFONDO Z = -0.3) ================= -->
       <a-box 
         position="0 0 -0.3" 
-        width="1.0" 
-        height="1.0" 
-        depth="0.6" 
+        width="1.0" height="1.0" depth="0.6" 
+        paper-material="color: #2b231d"
         shadow="cast: false; receive: true"
-        material="color: #080810; side: BackSide; roughness: 0.8">
+        material="side: BackSide">
       </a-box>
 
-      <!-- SCRITTA SUL FONDO DEL POZZO (Emissiva / Brillante) -->
-      <a-entity 
-        text-geometry="value: ALTROVE; size: 0.11; height: 0.02; font: https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/fonts/helvetiker_bold.typeface.json"
-        position="-0.33 -0.05 -0.58"
-        shadow="cast: false; receive: true"
-        material="color: #00FFFF; emissive: #00FFFF; emissiveIntensity: 0.8">
-      </a-entity>
 
-      <!-- GENERATORE DEL LABIRINTO TIPOGRAFICO CON OMBRE -->
-      <a-entity typographic-labyrinth></a-entity>
+      <!-- ================= STRATI DI CARTA INTAGLIATA (PAPERCUT PARALLAX) ================= -->
+
+      <!-- Livello 1 (Superficie - Z = -0.1): Cornice e Silhouette sognanti -->
+      <a-plane 
+        position="0 0 -0.1" 
+        width="0.85" height="0.85" 
+        paper-material="color: #ffffff"
+        animation="property: position; to: 0 0.02 -0.1; dir: alternate; loop: true; dur: 6000; easing: easeInOutSine">
+      </a-plane>
+
+      <!-- Livello 2 (Intermedio - Z = -0.2): Fogli sovrapposti che oscillano -->
+      <a-plane 
+        position="0 0.03 -0.2" 
+        width="0.7" height="0.7" 
+        paper-material="color: #f7f2ea"
+        animation="property: position; to: 0 -0.02 -0.2; dir: alternate; loop: true; dur: 8000; easing: easeInOutSine"
+        animation__rot="property: rotation; to: 0 0 2; dir: alternate; loop: true; dur: 10000; easing: easeInOutSine">
+      </a-plane>
+
+
+      <!-- ================= FRASETTE TIPOGRAFICHE SULLE PARETI ================= -->
+      <a-entity poetic-phrases></a-entity>
+
+
+      <!-- ================= SCRITTA SUL FONDO (Luce Calda Soffusa) ================= -->
+      <a-text 
+        value="Altrove" 
+        align="center" 
+        position="0 -0.05 -0.5" 
+        width="2"
+        color="#ffcca0"
+        animation="property: opacity; from: 0.5; to: 1; dir: alternate; loop: true; dur: 3500; easing: easeInOutSine">
+      </a-text>
 
     </a-entity>
   </a-scene>
