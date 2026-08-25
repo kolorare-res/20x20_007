@@ -5,17 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Altrove - WebAR Poetico</title>
 
-  <!-- A-Frame, MindAR e Text Geometry -->
+  <!-- A-Frame & MindAR -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+    }
+
+    /* FIX SCHERMO NERO: Forziamo il video della fotocamera dietro il canvas 3D */
+    video {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      z-index: -2 !important;
+    }
+
+    .a-canvas {
+      z-index: 1 !important;
+    }
   </style>
 
   <script>
-    // 1. GENERATORE TATTILITÀ CARTA PROCEDURALE
+    // GENERATORE TATTILITÀ CARTA PROCEDURALE
     AFRAME.registerComponent('paper-material', {
       schema: {
         color: { type: 'color', default: '#f5f0eb' }
@@ -26,15 +44,15 @@
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
 
-        // Base avorio/carta
+        // Sfondo base carta avorio/calda
         ctx.fillStyle = this.data.color;
         ctx.fillRect(0, 0, 512, 512);
 
-        // Fibra e grana della carta
+        // Generazione fibra e grana della carta
         const imgData = ctx.getImageData(0, 0, 512, 512);
         const data = imgData.data;
         for (let i = 0; i < data.length; i += 4) {
-          const noise = (Math.random() - 0.5) * 14;
+          const noise = (Math.random() - 0.5) * 16;
           data[i]     = Math.min(255, Math.max(0, data[i] + noise));
           data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
           data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
@@ -43,6 +61,7 @@
 
         const texture = new THREE.CanvasTexture(canvas);
         
+        // Applicazione materiale reattivo alle luci 3D
         this.el.addEventListener('loaded', () => {
           const mesh = this.el.getObject3D('mesh');
           if (mesh) {
@@ -59,18 +78,17 @@
       }
     });
 
-    // 2. COMPONENTE PER FRASETTE POETICHE SULLE PARETI
+    // COMPONENTE PER FRASETTE POETICHE SULLE PARETI
     AFRAME.registerComponent('poetic-phrases', {
       init: function () {
         const el = this.el;
-        // URL FONT AFFIDABILE E FUNZIONANTE (CDN A-Frame Ufficiale)
         const fontUrl = 'https://cdn.aframe.io/fonts/Roboto-msdf.json';
 
         const frasi = [
-          { text: "LA LETTURA E' UN PORTALE", pos: "0 0.28 -0.2", rot: "0 0 0", size: 0.04 },
-          { text: "SPAZI INFINITI NEL TESTO", pos: "-0.3 0 -0.3", rot: "0 0 90", size: 0.035 },
-          { text: "ABITARE ALTRE VITE", pos: "0.3 0 -0.3", rot: "0 0 -90", size: 0.035 },
-          { text: "EVADERE DALLA REALTA'", pos: "0 -0.28 -0.2", rot: "0 0 0", size: 0.04 }
+          { text: "LA LETTURA E' UN PORTALE", pos: "0 0.32 -0.25", rot: "0 0 0", size: 0.04 },
+          { text: "SPAZI INFINITI NEL TESTO", pos: "-0.32 0 -0.3", rot: "0 0 90", size: 0.035 },
+          { text: "ABITARE ALTRE VITE", pos: "0.32 0 -0.3", rot: "0 0 -90", size: 0.035 },
+          { text: "EVADERE DALLA REALTA'", pos: "0 -0.32 -0.25", rot: "0 0 0", size: 0.04 }
         ];
 
         frasi.forEach((item) => {
@@ -78,7 +96,7 @@
           textEl.setAttribute('text', {
             value: item.text,
             align: 'center',
-            color: '#5c4d41',
+            color: '#8c6d53',
             font: fontUrl,
             width: 1.2
           });
@@ -93,7 +111,7 @@
 
 <body>
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind;" 
+    mindar-image="imageTargetSrc: ./targets.mind;" 
     color-space="sRGB" 
     renderer="colorManagement: true; physicallyCorrectLights: true; shadowMapEnabled: true; shadowMapType: PCFSoftShadowMap;" 
     vr-mode-ui="enabled: false" 
@@ -103,20 +121,20 @@
 
     <a-entity mindar-image-target="targetIndex: 0">
 
-      <!-- ================= AMBIENTAZIONE LUCE CALDA E MORBIDA ================= -->
-      <!-- Luce d'ambiente color pesca/miele -->
+      <!-- ================= ILLUMINAZIONE POETICA ================= -->
+      <!-- Luce d'ambiente calda -->
       <a-light type="ambient" color="#ffefe0" intensity="0.7"></a-light>
 
-      <!-- Luce direzionale per proiettare le ombre dei fogli di carta -->
+      <!-- Luce direzionale inclinata per proiettare le ombre tra i fogli -->
       <a-light 
         type="directional" 
         color="#fff4e6" 
         intensity="1.5" 
-        position="0.5 1.2 0.8" 
+        position="0.6 1.2 0.8" 
         light="castShadow: true; shadowMapWidth: 1024; shadowMapHeight: 1024; shadowBias: -0.001">
       </a-light>
 
-      <!-- Spot luminoso caldo sul fondo del pozzo -->
+      <!-- Spot tenue dal fondo -->
       <a-light type="point" color="#ffaa55" intensity="0.8" position="0 0 -0.5" distance="0.8"></a-light>
 
 
@@ -132,18 +150,18 @@
 
       <!-- ================= STRATI DI CARTA INTAGLIATA (PAPERCUT PARALLAX) ================= -->
 
-      <!-- Livello 1 (Superficie - Z = -0.1): Cornice e Silhouette sognanti -->
+      <!-- Livello 1 (Superficie - Z = -0.1): Foglio di carta avorio fluttuante -->
       <a-plane 
         position="0 0 -0.1" 
-        width="0.85" height="0.85" 
+        width="0.8" height="0.8" 
         paper-material="color: #ffffff"
         animation="property: position; to: 0 0.02 -0.1; dir: alternate; loop: true; dur: 6000; easing: easeInOutSine">
       </a-plane>
 
-      <!-- Livello 2 (Intermedio - Z = -0.2): Fogli sovrapposti che oscillano -->
+      <!-- Livello 2 (Intermedio - Z = -0.2): Foglio sovrapposto con lieve rotazione -->
       <a-plane 
-        position="0 0.03 -0.2" 
-        width="0.7" height="0.7" 
+        position="0 0.02 -0.2" 
+        width="0.65" height="0.65" 
         paper-material="color: #f7f2ea"
         animation="property: position; to: 0 -0.02 -0.2; dir: alternate; loop: true; dur: 8000; easing: easeInOutSine"
         animation__rot="property: rotation; to: 0 0 2; dir: alternate; loop: true; dur: 10000; easing: easeInOutSine">
@@ -154,14 +172,14 @@
       <a-entity poetic-phrases></a-entity>
 
 
-      <!-- ================= SCRITTA SUL FONDO (Luce Calda Soffusa) ================= -->
+      <!-- ================= SCRITTA SUL FONDO (Luce Soffusa) ================= -->
       <a-text 
         value="Altrove" 
         align="center" 
         position="0 -0.05 -0.5" 
         width="2"
         color="#ffcca0"
-        animation="property: opacity; from: 0.5; to: 1; dir: alternate; loop: true; dur: 3500; easing: easeInOutSine">
+        animation="property: opacity; from: 0.4; to: 1; dir: alternate; loop: true; dur: 3500; easing: easeInOutSine">
       </a-text>
 
     </a-entity>
