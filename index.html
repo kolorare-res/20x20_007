@@ -64,39 +64,33 @@
               texture.colorSpace = THREE.SRGBColorSpace;
             }
 
-            // Evita qualsiasi ripetizione UV extra
             texture.wrapS = THREE.ClampToEdgeWrapping;
             texture.wrapT = THREE.ClampToEdgeWrapping;
 
             const geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
             
-            // 1. Materiale Frontale: SOLO sulla faccia visibile davanti
-            const paperFrontMaterial = new THREE.MeshStandardMaterial({
+            // MeshBasicMaterial: ignora l'illuminazione e mantiene i colori originali esatti della PNG
+            const paperFrontMaterial = new THREE.MeshBasicMaterial({
               map: texture,
               transparent: true,
               alphaTest: 0.05,
-              roughness: 0.9,
-              metalness: 0.0,
-              side: THREE.FrontSide // Rende visibile l'immagine SOLO sul davanti
+              side: THREE.FrontSide
             });
 
-            // 2. Materiale Neutro: Per i 4 bordi sottili e la parete posteriore
-            const paperBackEdgeMaterial = new THREE.MeshStandardMaterial({
+            const paperBackEdgeMaterial = new THREE.MeshBasicMaterial({
               color: 0xffffff,
               transparent: true,
-              opacity: 0.0, // Retro trasparente per non ostruire la vista interna
-              roughness: 0.9,
-              metalness: 0.0
+              opacity: 0.0
             });
 
-            // Assegnazione facce BoxGeometry: [Right, Left, Top, Bottom, Front, Back]
+            // Assegnazione facce: [Right, Left, Top, Bottom, Front, Back]
             const materials = [
               paperBackEdgeMaterial,  
               paperBackEdgeMaterial,  
               paperBackEdgeMaterial,  
               paperBackEdgeMaterial,  
-              paperFrontMaterial,     // Faccia Frontale (Unica con la PNG)
-              paperBackEdgeMaterial   // Faccia Posteriore (Nessuna duplicazione)
+              paperFrontMaterial,     // Grafica PNG a colori nativi sul davanti
+              paperBackEdgeMaterial   
             ];
 
             const mesh = new THREE.Mesh(geometry, materials);
@@ -118,14 +112,13 @@
   <a-scene 
     mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10;" 
     color-space="sRGB" 
-    renderer="colorManagement: true, physicallyCorrectLights; antialias: true;" 
+    renderer="colorManagement: false; antialias: true;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-light type="ambient" intensity="0.85"></a-light>
-    <a-light type="directional" position="1 2 3" intensity="0.75"></a-light>
+    <!-- Luci 3D rimosse per non alterare i colori originali -->
 
     <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
       <a-entity id="diorama-container"></a-entity>
