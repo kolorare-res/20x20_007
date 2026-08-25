@@ -64,35 +64,39 @@
               texture.colorSpace = THREE.SRGBColorSpace;
             }
 
+            // Evita qualsiasi ripetizione UV extra
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+
             const geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
             
-            // Materiale per le facce frontali con grafica (Fronte e Retro)
+            // 1. Materiale Frontale: SOLO sulla faccia visibile davanti
             const paperFrontMaterial = new THREE.MeshStandardMaterial({
               map: texture,
               transparent: true,
               alphaTest: 0.05,
-              opacity: 0.96,
               roughness: 0.9,
               metalness: 0.0,
-              side: THREE.DoubleSide
+              side: THREE.FrontSide // Rende visibile l'immagine SOLO sul davanti
             });
 
-            // Materiale neutro colore cartoncino per i soli bordi laterali (spessore 2mm)
-            const paperEdgeMaterial = new THREE.MeshStandardMaterial({
-              color: 0xf4f1ea,
+            // 2. Materiale Neutro: Per i 4 bordi sottili e la parete posteriore
+            const paperBackEdgeMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.0, // Retro trasparente per non ostruire la vista interna
               roughness: 0.9,
               metalness: 0.0
             });
 
-            // Assegnazione materiali distinta per faccia per bloccare proiezioni doppie
-            // Order: Right, Left, Top, Bottom, Front, Back
+            // Assegnazione facce BoxGeometry: [Right, Left, Top, Bottom, Front, Back]
             const materials = [
-              paperEdgeMaterial,  
-              paperEdgeMaterial,  
-              paperEdgeMaterial,  
-              paperEdgeMaterial,  
-              paperFrontMaterial, 
-              paperFrontMaterial  
+              paperBackEdgeMaterial,  
+              paperBackEdgeMaterial,  
+              paperBackEdgeMaterial,  
+              paperBackEdgeMaterial,  
+              paperFrontMaterial,     // Faccia Frontale (Unica con la PNG)
+              paperBackEdgeMaterial   // Faccia Posteriore (Nessuna duplicazione)
             ];
 
             const mesh = new THREE.Mesh(geometry, materials);
@@ -111,7 +115,6 @@
     AR by <span>kolorare</span>
   </a>
 
-  <!-- SCENA CON PARAMETRI DI STABILIZZAZIONE FOTOCAMERA -->
   <a-scene 
     mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10;" 
     color-space="sRGB" 
@@ -121,7 +124,6 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Illiminazione bilanciata per tridimensionalità carta -->
     <a-light type="ambient" intensity="0.85"></a-light>
     <a-light type="directional" position="1 2 3" intensity="0.75"></a-light>
 
@@ -139,14 +141,14 @@
       const STEP_4CM = 0.2;     // 4 cm
       const DEPTH_2MM = 0.01;   // 2 mm
 
-      // --- BOTTOM-BOX (Fondo unico orizzontale da Z=0 a Z=1.0 alla base) ---
+      // --- BOTTOM-BOX ---
       const bottomBox = document.createElement("a-entity");
       bottomBox.setAttribute("png-paper-extrude", `src: images/bottom_box.png; width: ${SIZE}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
       bottomBox.setAttribute("rotation", "-90 0 0");
       bottomBox.setAttribute("position", `0 -0.5 0.5`);
       dioramaContainer.appendChild(bottomBox);
 
-      // --- SPACE01: PARETE SINISTRA (Chiusura 4x20 cm solo su lato SX tra 16cm e 20cm) ---
+      // --- SPACE01: PARETE SINISTRA ---
       const space01Left = document.createElement("a-entity");
       space01Left.setAttribute("png-paper-extrude", `src: images/space01_left.png; width: ${STEP_4CM}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
       space01Left.setAttribute("rotation", "0 90 0");
@@ -161,27 +163,19 @@
       dioramaContainer.appendChild(space01Bottom);
 
       // ==========================================
-      // LAYER VERTICALI PARALLELI AL TARGET (Space05 -> Space00)
+      // LAYER VERTICALI PARALLELI (Space05 -> Space00)
       // ==========================================
       const layersConfig = [
-        // Space05 (Target / Fondo - Z = 0 cm)
         { src: "images/space05.png", z: 0.0 },
-
-        // Space04 (Z = 4 cm)
         { src: "images/space04.png", z: 0.2 },
-
-        // Space03 (Z = 8 cm)
         { src: "images/space03.png", z: 0.4 },
-
-        // Space02 (Z = 12 cm)
         { src: "images/space02.png", z: 0.6 },
 
-        // Space01 (Parallasse a 16.0cm, 16.3cm, 16.6cm)
+        // Sub-layer Parallasse Space01
         { src: "images/space01_a.png", z: 0.800 },
         { src: "images/space01_b.png", z: 0.815 },
         { src: "images/space01_c.png", z: 0.830 },
 
-        // Space00 (Frontale Chiusura - Z = 20 cm)
         { src: "images/space00.png", z: 1.0 }
       ];
 
