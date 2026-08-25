@@ -2,41 +2,58 @@
 <html lang="it">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <script>
-    // Componente per estrudere le PNG trasparenti a 2mm con texture carta
     AFRAME.registerComponent('png-paper-extrude', {
       schema: {
         src: { type: 'string' },
-        depth: { type: 'number', default: 0.002 }, // 2 mm = 0.002 m
-        width: { type: 'number', default: 0.2 },   // 20 cm = 0.2 m
-        height: { type: 'number', default: 0.2 }   // 20 cm = 0.2 m
+        depth: { type: 'number', default: 0.002 }, // 2 mm
+        width: { type: 'number', default: 0.2 },   // 20 cm
+        height: { type: 'number', default: 0.2 }   // 20 cm
       },
       init: function () {
         const el = this.el;
         const data = this.data;
 
-        const loader = new THREE.TextureLoader();
-        loader.load(data.src, (texture) => {
-          texture.colorSpace = THREE.SRGBColorSpace;
-          
-          // Genera geometria Estrusa 3D basata sul piano
-          const geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
-          
-          // Materiale con effetto ruvido/opaco simil-carta
-          const material = new THREE.MeshStandardMaterial({
-            map: texture,
-            transparent: true,
-            alphaTest: 0.5, // Mantiene i bordi netti della PNG trasparente
-            roughness: 0.8,
-            metalness: 0.1
-          });
+        // Recupera il path corretto
+        let imgSrc = data.src;
+        if (data.src.startsWith('#')) {
+          const imgEl = document.querySelector(data.src);
+          if (imgEl) {
+            imgSrc = imgEl.getAttribute('src');
+          }
+        }
 
-          const mesh = new THREE.Mesh(geometry, material);
-          el.setObject3D('mesh', mesh);
-        });
+        const loader = new THREE.TextureLoader();
+        loader.load(
+          imgSrc, 
+          (texture) => {
+            // Compatibilità colori sicura tra versioni Three.js
+            if ('colorSpace' in texture && typeof THREE.SRGBColorSpace !== 'undefined') {
+              texture.colorSpace = THREE.SRGBColorSpace;
+            }
+
+            const geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
+            const material = new THREE.MeshStandardMaterial({
+              map: texture,
+              transparent: true,
+              alphaTest: 0.2,
+              roughness: 0.8,
+              metalness: 0.1,
+              side: THREE.DoubleSide
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            el.setObject3D('mesh', mesh);
+          },
+          undefined,
+          (err) => {
+            console.error("Errore caricamento immagine AR:", imgSrc, err);
+          }
+        );
       }
     });
   </script>
@@ -45,12 +62,11 @@
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind;" 
     color-space="sRGB" 
-    renderer="colorManagement: true, physicallyCorrectLights: true" 
+    renderer="colorManagement: true;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <!-- Immagini caricate dalla cartella images/ -->
       <img id="space01-a" src="images/space01_a.png">
       <img id="space01-b" src="images/space01_b.png">
       <img id="space01-c" src="images/space01_c.png">
@@ -60,29 +76,24 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Luci per esaltare l'effetto 3D della carta -->
-    <a-light type="ambient" intensity="0.7"></a-light>
+    <!-- Luce d'ambiente e direzionale -->
+    <a-light type="ambient" intensity="0.8"></a-light>
     <a-light type="directional" position="1 2 3" intensity="0.8"></a-light>
 
     <a-entity mindar-image-target="targetIndex: 0">
       
-      <!-- === SPACE01: 3 Layer Parallasse (Frontali) === -->
-      <!-- 16.0 cm dal target -->
+      <!-- Space01: 3 Layer Parallasse (Frontali) -->
       <a-entity png-paper-extrude="src: #space01-a; width: 0.2; height: 0.2;" position="0 0 0.160"></a-entity>
-      <!-- 16.3 cm dal target -->
       <a-entity png-paper-extrude="src: #space01-b; width: 0.2; height: 0.2;" position="0 0 0.163"></a-entity>
-      <!-- 16.6 cm dal target -->
       <a-entity png-paper-extrude="src: #space01-c; width: 0.2; height: 0.2;" position="0 0 0.166"></a-entity>
 
-      <!-- === SPACE01: Bottom-Box (Piano Orizzontale) === -->
-      <!-- Posizionato alla base (y = -10cm), esteso per il tratto di Space01 -->
+      <!-- Space01: Bottom-Box -->
       <a-entity png-paper-extrude="src: #space01-bottom; width: 0.2; height: 0.04;" 
                 rotation="-90 0 0" 
                 position="0 -0.10 0.16">
       </a-entity>
 
-      <!-- === SPACE01: Parete Sinistra (Chiusura 4x20 cm) === -->
-      <!-- Posizionato a sinistra (x = -10cm), perpendicolare al target -->
+      <!-- Space01: Parete Sinistra -->
       <a-entity png-paper-extrude="src: #space01-left; width: 0.04; height: 0.2;" 
                 rotation="0 90 0" 
                 position="-0.10 0 0.16">
