@@ -1,152 +1,146 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Altrove</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Altrove - Labirinto Tipografico WebAR</title>
 
-  <!-- Librerie A-Frame 1.4.2 e MindAR 1.2.5 -->
+  <!-- Librerie A-Frame, MindAR e Text Geometry per lettere 3D -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-  <!-- File di configurazione -->
-  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
   </style>
-</head>
-<body>
 
+  <script>
+    // Componente personalizzato per generare il Labirinto Tipografico con Ombre Dinamiche
+    AFRAME.registerComponent('typographic-labyrinth', {
+      init: function () {
+        const el = this.el;
+        // Font standard Three.js caricato da CDN
+        const fontUrl = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/fonts/helvetiker_bold.typeface.json';
+
+        // Struttura delle frasi nel labirinto (testo, posizione X Y Z, rotazione X Y Z, colore)
+        const labirintoData = [
+          // Livello Alto (Z = -0.15) - Travi orizzontali
+          { text: "LA LETTURA E' UN PORTALE", pos: "-0.4 0.25 -0.15", rot: "0 0 0", size: 0.035, depth: 0.015, color: "#FFFFFF" },
+          { text: "EVADERE DALLA REALTA'", pos: "-0.38 -0.25 -0.18", rot: "0 0 0", size: 0.035, depth: 0.015, color: "#E6E6FA" },
+
+          // Livello Medio (Z = -0.3) - Pareti verticali in profondità
+          { text: "SPAZI INFINITI NEL TESTO", pos: "-0.28 0.4 -0.1", rot: "90 90 0", size: 0.03, depth: 0.01, color: "#B0C4DE" },
+          { text: "ABITARE ALTRE VITE", pos: "0.25 0.4 -0.15", rot: "90 90 0", size: 0.03, depth: 0.01, color: "#ADD8E6" },
+
+          // Traversa diagonale interna (Z = -0.4)
+          { text: "PAGINE SENZA CONFINE", pos: "-0.35 0 -0.38", rot: "0 0 15", size: 0.028, depth: 0.01, color: "#F0F8FF" }
+        ];
+
+        // Generazione automatica dei blocchi di testo 3D
+        labirintoData.forEach((item) => {
+          const textEl = document.createElement('a-entity');
+
+          textEl.setAttribute('text-geometry', {
+            value: item.text,
+            size: item.size,
+            height: item.depth,
+            font: fontUrl
+          });
+
+          textEl.setAttribute('position', item.pos);
+          textEl.setAttribute('rotation', item.rot);
+          textEl.setAttribute('material', {
+            color: item.color,
+            roughness: 0.3,
+            metalness: 0.2
+          });
+
+          // Attivazione esplicita delle ombre A-Frame / Three.js
+          textEl.setAttribute('shadow', 'cast: true; receive: true');
+
+          // Assicura che il mesh Three.js sottostante applichi correttamente cast/receive
+          textEl.addEventListener('model-loaded', () => {
+            const mesh = textEl.getObject3D('mesh');
+            if (mesh) {
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+            }
+          });
+
+          el.appendChild(textEl);
+        });
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <!-- SCENA A-FRAME con Configurazione Renderer Ombre Morbide (PCFSoftShadowMap) -->
   <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.001; filterBeta: 10;" 
+    mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/examples/image-tracking/assets/card-example/card.mind;" 
     color-space="sRGB" 
-    renderer="colorManagement: true, physicallyCorrectLights" 
+    renderer="colorManagement: true; physicallyCorrectLights: true; shadowMapEnabled: true; shadowMapType: PCFSoftShadowMap;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Contenitore dell'opera riconosciuta: Altrove -->
-    <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
-    </a-entity>
+    <!-- SYSTEMA LUCI PER PROIEZIONE OMBRE -->
+    <!-- 1. Luce Ambientale di base (scura per accentuare i contrasti) -->
+    <a-light type="ambient" color="#111122" intensity="0.5"></a-light>
 
-  </a-scene>
+    <!-- 2. Luce Direzionale inclinata che spara verso l'interno della scatola -->
+    <a-light 
+      type="directional" 
+      color="#FFFFFF" 
+      intensity="2.2" 
+      position="0.8 1.5 0.6" 
+      target="#box-target"
+      light="castShadow: true; 
+             shadowCameraTop: 0.8; 
+             shadowCameraBottom: -0.8; 
+             shadowCameraLeft: -0.8; 
+             shadowCameraRight: 0.8; 
+             shadowMapWidth: 2048; 
+             shadowMapHeight: 2048; 
+             shadowBias: -0.0005;">
+    </a-light>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const targetEntity = document.querySelector("#ar-target");
+    <!-- 3. Punto Luce interno (effetti di illuminazione dal fondo "ALTROVE") -->
+    <a-light type="point" color="#00FFFF" intensity="1.2" distance="0.8" position="0 0 -0.55"></a-light>
 
-      const totalLayers = config.layers || 6;
-      const maxDepth = config.maxDepth || 0.6;
-      const openDur = config.openDuration || 1500;
-      const stagger = config.staggerDelay || 120;
-      const easingType = config.easing || "easeOutCubic";
-
-      const stepDepth = totalLayers > 1 ? (maxDepth / (totalLayers - 1)) : 0;
+    <!-- TARGET AR -->
+    <a-entity mindar-image-target="targetIndex: 0">
       
-      // Profondità soffitto (pari a maxDepth)
-      const topCenterZ = maxDepth / 2;
+      <!-- Target di puntamento per la luce direzionale -->
+      <a-entity id="box-target" position="0 0 -0.3"></a-entity>
 
-      // Profondità extra base (sporge del 40% in più)
-      const bottomDepth = maxDepth * 1.4; 
-      const bottomCenterZ = bottomDepth / 2;
+      <!-- SCATOLA PROFONDA / POZZO PROSPETTICO (1.0x1.0m = 20x20cm nel target) -->
+      <!-- 'receive: true' riceve le ombre proiettate dal testo 3D -->
+      <a-box 
+        position="0 0 -0.3" 
+        width="1.0" 
+        height="1.0" 
+        depth="0.6" 
+        shadow="cast: false; receive: true"
+        material="color: #080810; side: BackSide; roughness: 0.8">
+      </a-box>
 
-      // ==========================================
-      // TEXTURE FONDO, SOFFITTO E BASE
-      // ==========================================
-      const boxTextures = {
-        back: "./images/box_back.png",     // Texture parete fondo (quadrata)
-        top: "./images/box_top.png",       // Texture soffitto
-        bottom: "./images/box_bottom.png"  // Texture base allungata
-      };
+      <!-- SCRITTA SUL FONDO DEL POZZO (Emissiva / Brillante) -->
+      <a-entity 
+        text-geometry="value: ALTROVE; size: 0.11; height: 0.02; font: https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/fonts/helvetiker_bold.typeface.json"
+        position="-0.33 -0.05 -0.58"
+        shadow="cast: false; receive: true"
+        material="color: #00FFFF; emissive: #00FFFF; emissiveIntensity: 0.8">
+      </a-entity>
 
-      // ==========================================
-      // 1. STRUTTURA SCATOLA 3D: BACK + TOP + BOTTOM ALLUNGATO
-      // ==========================================
-      const boxGroup = document.createElement("a-entity");
-      boxGroup.setAttribute("id", "diorama-box");
+      <!-- GENERATORE DEL LABIRINTO TIPOGRAFICO CON OMBRE -->
+      <a-entity typographic-labyrinth></a-entity>
 
-      const createWall = (width, height, position, rotation, texturePath) => {
-        const wall = document.createElement("a-plane");
-        wall.setAttribute("width", width);
-        wall.setAttribute("height", height);
-        wall.setAttribute("position", position);
-        wall.setAttribute("rotation", rotation);
-        
-        if (texturePath) {
-          wall.setAttribute("src", texturePath);
-          wall.setAttribute("material", "transparent: true; alphaTest: 0.5; side: double; depthTest: true;");
-        } else {
-          wall.setAttribute("material", "color: #1a1a1a; roughness: 0.8; side: double; depthTest: true;");
-        }
-        
-        return wall;
-      };
-
-      // PARETE DI FONDO (Z = 0)
-      boxGroup.appendChild(createWall("1", "1", "0 0 -0.005", "0 0 0", boxTextures.back));
-
-      // PARETE SUPERIORE (SOFFITTO)
-      boxGroup.appendChild(createWall("1", maxDepth, `0 0.5 ${topCenterZ}`, "90 0 0", boxTextures.top));
-
-      // PARETE INFERIORE (BASE ALLUNGATA TOWARDS THE CAMERA)
-      boxGroup.appendChild(createWall("1", bottomDepth, `0 -0.5 ${bottomCenterZ}`, "-90 0 0", boxTextures.bottom));
-
-      targetEntity.appendChild(boxGroup);
-
-      // ==========================================
-      // 2. LAYER Z ALL'INTERNO DELLA SCATOLA
-      // ==========================================
-      for (let i = 1; i <= totalLayers; i++) {
-        const layerNumber = String(i).padStart(2, '0');
-        const plane = document.createElement("a-plane");
-        
-        plane.setAttribute("src", `./images/layer${layerNumber}.png`);
-        plane.setAttribute("width", "1");
-        plane.setAttribute("height", "1");
-        plane.setAttribute("position", "0 0 0");
-        plane.setAttribute("scale", "1 1 1");
-        
-        plane.setAttribute("material", `
-          transparent: true; 
-          alphaTest: 0.5; 
-          side: front;
-          depthTest: true;
-        `);
-        
-        plane.setAttribute("render-order", 10 + i);
-
-        if (i > 1) {
-          const targetZ = (i - 1) * stepDepth;
-          const delayTime = (i - 1) * stagger;
-          const scaleFactor = 1 + ((i - 1) / (totalLayers - 1)) * 0.28;
-
-          plane.setAttribute("animation__pos", `
-            property: position;
-            from: 0 0 0;
-            to: 0 0 ${targetZ.toFixed(4)};
-            dur: ${openDur};
-            delay: ${delayTime};
-            easing: ${easingType};
-            fill: forwards;
-          `);
-
-          plane.setAttribute("animation__scale", `
-            property: scale;
-            from: 1 1 1;
-            to: ${scaleFactor} ${scaleFactor} 1;
-            dur: ${openDur};
-            delay: ${delayTime};
-            easing: ${easingType};
-            fill: forwards;
-          `);
-        }
-
-        targetEntity.appendChild(plane);
-      }
-    });
-  </script>
-
+    </a-entity>
+  </a-scene>
 </body>
 </html>
