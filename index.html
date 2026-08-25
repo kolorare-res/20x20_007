@@ -1,37 +1,66 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- A-Frame e MindAR -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teatrino di Carta AR - MindAR</title>
+
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+    .a-enter-vr-button { display: none !important; }
+
+    .kolorare-btn {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      z-index: 9999;
+      background: rgba(11, 19, 26, 0.85);
+      color: #ffffff;
+      text-decoration: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .kolorare-btn span { color: #e63946; margin-left: 3px; }
+  </style>
 
   <script>
+    // Componente estrusione con scala relativa a MindAR (1 unità = 20cm target)
     AFRAME.registerComponent('png-paper-extrude', {
       schema: {
         src: { type: 'string' },
-        depth: { type: 'number', default: 0.002 }, // 2 mm
-        width: { type: 'number', default: 0.2 },   // 20 cm
-        height: { type: 'number', default: 0.2 }   // 20 cm
+        depth: { type: 'number', default: 0.01 }, // 2mm rispetto al target da 20cm (2mm / 200mm = 0.01)
+        width: { type: 'number', default: 1.0 },  // 1.0 = copre l'intero target (20cm)
+        height: { type: 'number', default: 1.0 }  // 1.0 = copre l'intero target (20cm)
       },
       init: function () {
         const el = this.el;
         const data = this.data;
 
-        // Recupera il path corretto
         let imgSrc = data.src;
         if (data.src.startsWith('#')) {
           const imgEl = document.querySelector(data.src);
-          if (imgEl) {
-            imgSrc = imgEl.getAttribute('src');
-          }
+          if (imgEl) imgSrc = imgEl.getAttribute('src');
         }
 
         const loader = new THREE.TextureLoader();
         loader.load(
           imgSrc, 
           (texture) => {
-            // Compatibilità colori sicura tra versioni Three.js
             if ('colorSpace' in texture && typeof THREE.SRGBColorSpace !== 'undefined') {
               texture.colorSpace = THREE.SRGBColorSpace;
             }
@@ -40,7 +69,7 @@
             const material = new THREE.MeshStandardMaterial({
               map: texture,
               transparent: true,
-              alphaTest: 0.2,
+              alphaTest: 0.4,
               roughness: 0.8,
               metalness: 0.1,
               side: THREE.DoubleSide
@@ -50,56 +79,101 @@
             el.setObject3D('mesh', mesh);
           },
           undefined,
-          (err) => {
-            console.error("Errore caricamento immagine AR:", imgSrc, err);
-          }
+          (err) => console.error("Errore caricamento texture AR:", imgSrc, err)
         );
       }
     });
   </script>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body>
+
+  <a href="https://kolorare.it/" target="_blank" rel="noopener noreferrer" class="kolorare-btn" aria-label="Credits">
+    AR by <span>kolorare</span>
+  </a>
+
   <a-scene 
-    mindar-image="imageTargetSrc: ./targets.mind;" 
+    mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10;" 
     color-space="sRGB" 
-    renderer="colorManagement: true;" 
+    renderer="colorManagement: true, physicallyCorrectLights; antialias: true;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
-    
-    <a-assets>
-      <img id="space01-a" src="images/space01_a.png">
-      <img id="space01-b" src="images/space01_b.png">
-      <img id="space01-c" src="images/space01_c.png">
-      <img id="space01-bottom" src="images/space01_bottom.png">
-      <img id="space01-left" src="images/space01_left.png">
-    </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Luce d'ambiente e direzionale -->
-    <a-light type="ambient" intensity="0.8"></a-light>
-    <a-light type="directional" position="1 2 3" intensity="0.8"></a-light>
+    <a-light type="ambient" intensity="0.85"></a-light>
+    <a-light type="directional" position="1 2 3" intensity="0.75"></a-light>
 
-    <a-entity mindar-image-target="targetIndex: 0">
-      
-      <!-- Space01: 3 Layer Parallasse (Frontali) -->
-      <a-entity png-paper-extrude="src: #space01-a; width: 0.2; height: 0.2;" position="0 0 0.160"></a-entity>
-      <a-entity png-paper-extrude="src: #space01-b; width: 0.2; height: 0.2;" position="0 0 0.163"></a-entity>
-      <a-entity png-paper-extrude="src: #space01-c; width: 0.2; height: 0.2;" position="0 0 0.166"></a-entity>
-
-      <!-- Space01: Bottom-Box -->
-      <a-entity png-paper-extrude="src: #space01-bottom; width: 0.2; height: 0.04;" 
-                rotation="-90 0 0" 
-                position="0 -0.10 0.16">
-      </a-entity>
-
-      <!-- Space01: Parete Sinistra -->
-      <a-entity png-paper-extrude="src: #space01-left; width: 0.04; height: 0.2;" 
-                rotation="0 90 0" 
-                position="-0.10 0 0.16">
-      </a-entity>
-
+    <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
+      <a-entity id="diorama-container"></a-entity>
     </a-entity>
+
   </a-scene>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const dioramaContainer = document.querySelector("#diorama-container");
+
+      // ==========================================
+      // UNITÀ DI MISURA RIPROPORTIONATE (Target 20cm = 1.0)
+      // ==========================================
+      const SIZE = 1.0;         // 20 cm
+      const STEP_4CM = 0.2;     // 4 cm = 0.2 unità
+      const DEPTH_2MM = 0.01;   // 2 mm = 0.01 unità
+
+      // --- BOTTOM-BOX (Fondo Orizzontale da Z=0 a Z=1.0) ---
+      const bottomBox = document.createElement("a-entity");
+      bottomBox.setAttribute("png-paper-extrude", `src: images/bottom_box.png; width: ${SIZE}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
+      bottomBox.setAttribute("rotation", "-90 0 0");
+      // Posizionato a Y = -0.5 (base del target) e Z = 0.5 (centro della profondità 20cm)
+      bottomBox.setAttribute("position", `0 -0.5 0.5`);
+      dioramaContainer.appendChild(bottomBox);
+
+      // --- SPACE01: PARETE SINISTRA (Chiusura 4x20 cm a X = -0.5, Z tra 16cm e 20cm) ---
+      const space01Left = document.createElement("a-entity");
+      space01Left.setAttribute("png-paper-extrude", `src: images/space01_left.png; width: ${STEP_4CM}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
+      space01Left.setAttribute("rotation", "0 90 0");
+      space01Left.setAttribute("position", `-0.5 0 0.9`);
+      dioramaContainer.appendChild(space01Left);
+
+      // --- SPACE01: BOTTOM DEDICATO (Orizzontale 20x4 cm a Z tra 16cm e 20cm) ---
+      const space01Bottom = document.createElement("a-entity");
+      space01Bottom.setAttribute("png-paper-extrude", `src: images/space01_bottom.png; width: ${SIZE}; height: ${STEP_4CM}; depth: ${DEPTH_2MM};`);
+      space01Bottom.setAttribute("rotation", "-90 0 0");
+      space01Bottom.setAttribute("position", `0 -0.5 0.9`);
+      dioramaContainer.appendChild(space01Bottom);
+
+      // ==========================================
+      // LAYER VERTICALI DA SPACE05 A SPACE00
+      // ==========================================
+      const layersConfig = [
+        // Space05 (Z = 0 cm)
+        { src: "images/space05.png", z: 0.0 },
+
+        // Space04 (Z = 4 cm)
+        { src: "images/space04.png", z: 0.2 },
+
+        // Space03 (Z = 8 cm)
+        { src: "images/space03.png", z: 0.4 },
+
+        // Space02 (Z = 12 cm)
+        { src: "images/space02.png", z: 0.6 },
+
+        // Space01 (Z = 16.0cm, 16.3cm, 16.6cm)
+        { src: "images/space01_a.png", z: 0.800 },
+        { src: "images/space01_b.png", z: 0.815 },
+        { src: "images/space01_c.png", z: 0.830 },
+
+        // Space00 (Z = 20 cm - Chiusura Frontale)
+        { src: "images/space00.png", z: 1.0 }
+      ];
+
+      layersConfig.forEach((layer) => {
+        const entity = document.createElement("a-entity");
+        entity.setAttribute("png-paper-extrude", `src: ${layer.src}; width: ${SIZE}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
+        entity.setAttribute("position", `0 0 ${layer.z.toFixed(3)}`);
+        dioramaContainer.appendChild(entity);
+      });
+    });
+  </script>
 </body>
 </html>
