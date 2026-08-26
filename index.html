@@ -80,82 +80,85 @@
       const layer05BottomTexture = "./images/layer05_bottom.png"; 
       const sideTexture = "./images/layer05-box_side.png"; 
 
-      // ==========================================
-      // 2. CREAZIONE DEL FONDO GENERALE + LAYER05 BOTTOM
-      // ==========================================
-      const overlapZ = -0.01; 
-      const frontMargin = 0.005; 
-      const zBack = layersConfig[0].z + overlapZ; 
-      const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; 
-      const bottomLengthExact = zFront - zBack; 
-      const bottomCenterZExact = zBack + (bottomLengthExact / 2); 
-      const bottomYPos = -(planeHeight / 2 + 0.001);
+    // ==========================================
+// 2. LAYER05_BOTTOM (Striscia + Spicchio per chiudere la curva)
+// ==========================================
+const zLayer05 = layersConfig[4].z; // 0.32
+const zLayer06 = layersConfig[5].z; // 0.40
+const stripDepth = zLayer06 - zLayer05; // 0.08
+const stripCenterZ = zLayer05 + (stripDepth / 2); 
+const curveRadius = stripDepth; 
 
-      // Piano Base Generale
-      const bottomPlane = document.createElement("a-plane");
-      bottomPlane.setAttribute("width", planeWidth);
-      bottomPlane.setAttribute("height", bottomLengthExact);
-      bottomPlane.setAttribute("position", `0 ${bottomYPos.toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
-      bottomPlane.setAttribute("rotation", "-90 0 0");
-      bottomPlane.setAttribute("material", `src: url(${bottomTexture}); transparent: true; alphaTest: 0.5; side: double; depthTest: true;`);
-      bottomPlane.setAttribute("render-order", 1);
-      targetEntity.appendChild(bottomPlane);
+// A) Striscia rettangolare principale
+const layer05BottomPlane = document.createElement("a-plane");
+layer05BottomPlane.setAttribute("width", planeWidth);
+layer05BottomPlane.setAttribute("height", stripDepth);
+layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
+layer05BottomPlane.setAttribute("rotation", "-90 0 0");
+layer05BottomPlane.setAttribute("material", `
+  src: url(${layer05BottomTexture}); 
+  transparent: true; 
+  alphaTest: 0.01; 
+  depthWrite: false; 
+  depthTest: true;
+  side: double;
+`);
+layer05BottomPlane.setAttribute("render-order", 2);
+targetEntity.appendChild(layer05BottomPlane);
 
-      // Striscia Layer05 Bottom: Compresa ESATTAMENTE tra Layer05 (Z=0.32) e Layer06 (Z=0.40)
-      const zLayer05 = layersConfig[4].z; // 0.32
-      const zLayer06 = layersConfig[5].z; // 0.40
-      const stripDepth = zLayer06 - zLayer05; // 0.08
-      const stripCenterZ = zLayer05 + (stripDepth / 2); 
+// B) Spicchio di fondo per chiudere il buco sotto la curva
+const curveCenterX = -(planeWidth / 2);
+const curveCenterZ = zLayer05 + curveRadius;
 
-      const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", planeWidth);
-      layer05BottomPlane.setAttribute("height", stripDepth);
-      layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
-      layer05BottomPlane.setAttribute("rotation", "-90 0 0");
-      layer05BottomPlane.setAttribute("material", `
-        src: url(${layer05BottomTexture}); 
-        transparent: true; 
-        alphaTest: 0.01; 
-        depthWrite: false; 
-        depthTest: true;
-        side: double;
-      `);
-      layer05BottomPlane.setAttribute("render-order", 2);
-      targetEntity.appendChild(layer05BottomPlane);
+const bottomCornerCap = document.createElement("a-cylinder");
+bottomCornerCap.setAttribute("radius", curveRadius);
+bottomCornerCap.setAttribute("height", 0.001); // Spessore minimo per la base
+bottomCornerCap.setAttribute("theta-start", 180);
+bottomCornerCap.setAttribute("theta-length", 90);
+bottomCornerCap.setAttribute("position", `${curveCenterX.toFixed(4)} ${(bottomYPos + 0.0005).toFixed(4)} ${curveCenterZ.toFixed(4)}`);
+bottomCornerCap.setAttribute("material", `
+  src: url(${layer05BottomTexture}); 
+  transparent: true; 
+  alphaTest: 0.01; 
+  depthWrite: false; 
+  depthTest: true;
+  side: double;
+`);
+bottomCornerCap.setAttribute("render-order", 2);
+targetEntity.appendChild(bottomCornerCap);
 
-      // ==========================================
-      // 3. RACCORDO CURVO SX (ALLINEATO SECONDO IL TRACCIATO ROSSO)
-      // ==========================================
-      const curveRadius = zLayer06 - zLayer05; // 0.08
-      const wallThickness = 0.004; 
+// ==========================================
+// 3. RACCORDO CURVO SX (GRAPHICA SPECCHIATA/CORRETTA)
+// ==========================================
+const wallThickness = 0.004; 
 
-      const curveCenterX = -(planeWidth / 2);
-      const curveCenterZ = zLayer05 + curveRadius;
+// Superficie Curva Esterna (scale="-1 1 1" per ribaltare la texture)
+const outerCurvedSide = document.createElement("a-cylinder");
+outerCurvedSide.setAttribute("radius", curveRadius);
+outerCurvedSide.setAttribute("height", planeHeight);
+outerCurvedSide.setAttribute("theta-start", 180);
+outerCurvedSide.setAttribute("theta-length", 90);
+outerCurvedSide.setAttribute("open-ended", "true");
+outerCurvedSide.setAttribute("scale", "-1 1 1"); // Ribalta la grafica orizzontalmente
+outerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
+outerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
+outerCurvedSide.setAttribute("render-order", 15);
+targetEntity.appendChild(outerCurvedSide);
 
-      // Superficie Curva Esterna
-      const outerCurvedSide = document.createElement("a-cylinder");
-      outerCurvedSide.setAttribute("radius", curveRadius);
-      outerCurvedSide.setAttribute("height", planeHeight);
-      outerCurvedSide.setAttribute("theta-start", 180);
-      outerCurvedSide.setAttribute("theta-length", 90);
-      outerCurvedSide.setAttribute("open-ended", "true");
-      outerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
-      outerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
-      outerCurvedSide.setAttribute("render-order", 15);
-      targetEntity.appendChild(outerCurvedSide);
+// Superficie Curva Interna (Spessore 4 mm)
+const innerCurvedSide = document.createElement("a-cylinder");
+innerCurvedSide.setAttribute("radius", curveRadius - wallThickness);
+innerCurvedSide.setAttribute("height", planeHeight);
+innerCurvedSide.setAttribute("theta-start", 180);
+innerCurvedSide.setAttribute("theta-length", 90);
+innerCurvedSide.setAttribute("open-ended", "true");
+innerCurvedSide.setAttribute("scale", "-1 1 1");
+innerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
+innerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
+innerCurvedSide.setAttribute("render-order", 14);
+targetEntity.appendChild(innerCurvedSide);
 
-      // Superficie Curva Interna (Spessore 4 mm)
-      const innerCurvedSide = document.createElement("a-cylinder");
-      innerCurvedSide.setAttribute("radius", curveRadius - wallThickness);
-      innerCurvedSide.setAttribute("height", planeHeight);
-      innerCurvedSide.setAttribute("theta-start", 180);
-      innerCurvedSide.setAttribute("theta-length", 90);
-      innerCurvedSide.setAttribute("open-ended", "true");
-      innerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
-      innerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
-      innerCurvedSide.setAttribute("render-order", 14);
-      targetEntity.appendChild(innerCurvedSide);
-
+      
       // ==========================================
       // 4. GENERAZIONE LAYER E ANIMAZIONE FOGLIE MULTIPLE
       // ==========================================
