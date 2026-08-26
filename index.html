@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - 6 Livelli</title>
+  <title>Diorama WebAR - 6 Livelli con Fondo Sovrapposto</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -43,7 +43,6 @@
 </head>
 <body>
 
-  <!-- Inserisci il percorso del tuo file .mind in imageTargetSrc -->
   <a-scene 
     mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.001; filterBeta: 0.01; missTolerance: 5;" 
     color-space="sRGB" 
@@ -65,35 +64,59 @@
       // ==========================================
       // 1. CONFIGURAZIONE DEI 6 LIVELLI PNG
       // ==========================================
-      // Inserisci i percorsi delle tue immagini e la profondità (z).
-      // z = 0 indica il piano dell'immagine target.
-      // Valori di z positivi spingono i livelli verso l'osservatore (in avanti).
       const layersConfig = [
-        { src: "./images/layer01.png", z: 0.00 }, // Sfondo (attaccato al target)
+        { src: "./images/layer01.png", z: 0.00 }, // Sfondo scatola
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
         { src: "./images/layer05.png", z: 0.32 },
-        { src: "./images/layer06.png", z: 0.40 }  // Primo piano
+        { src: "./images/layer06.png", z: 0.40 }  // Bordo frontale
       ];
 
-      // Dimensioni del piano AR (1 = uguale alla dimensione del target tracciato)
-      const planeWidth = "1";
-      const planeHeight = "1";
+      const planeWidth = 1;
+      const planeHeight = 1;
+      const bottomTexture = "./images/box_bottom.png"; 
 
       // ==========================================
-      // 2. GENERAZIONE AUTOMATICA DEI PIANI 3D
+      // 2. CREAZIONE DEL FONDO CON OVERLAP
+      // ==========================================
+      const overlapZ = -0.01; // Spinge la base 1cm dietro il Layer01 (Z = -0.01)
+      const frontMargin = 0.005; // 0.5cm di margine extra sul fronte per chiudere perfettamente
+
+      const zBack = layersConfig[0].z + overlapZ; // Inizio reale (-0.01)
+      const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; // Fine reale (0.405)
+
+      const bottomLengthExact = zFront - zBack; // Lunghezza totale corretta
+      const bottomCenterZExact = zBack + (bottomLengthExact / 2); // Centro preciso
+
+      const bottomPlane = document.createElement("a-plane");
+      bottomPlane.setAttribute("width", planeWidth);
+      bottomPlane.setAttribute("height", bottomLengthExact);
+      
+      // Abbassato leggermente sull'asse Y (-0.501) per evitare intersezioni con il bordo inferiore dei layer
+      bottomPlane.setAttribute("position", `0 -${(planeHeight / 2 + 0.001).toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
+      bottomPlane.setAttribute("rotation", "-90 0 0");
+
+      if (bottomTexture) {
+        bottomPlane.setAttribute("src", bottomTexture);
+        bottomPlane.setAttribute("material", "transparent: true; alphaTest: 0.5; side: double; depthTest: true;");
+      } else {
+        bottomPlane.setAttribute("material", "color: #0b131a; roughness: 0.9; side: double; depthTest: true;");
+      }
+
+      targetEntity.appendChild(bottomPlane);
+
+      // ==========================================
+      // 3. GENERAZIONE DEI 6 PIANI (LAYER PNG)
       // ==========================================
       layersConfig.forEach((layer, idx) => {
         const plane = document.createElement("a-plane");
         
-        // Attributi geometrici e sorgente
         plane.setAttribute("src", layer.src);
         plane.setAttribute("width", planeWidth);
         plane.setAttribute("height", planeHeight);
         plane.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
         
-        // Trasparenza ottimizzata per evitare glitch visivi tra i layer
         plane.setAttribute("material", `
           transparent: true; 
           alphaTest: 0.5; 
@@ -101,7 +124,6 @@
           depthTest: true;
         `);
         
-        // Garantisce l'ordine di rendering corretto (dal più lontano al più vicino)
         plane.setAttribute("render-order", 10 + idx);
         
         targetEntity.appendChild(plane);
