@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Distanza PNG Extra Aumentata</title>
+  <title>Diorama WebAR - PNG Extra come Box 3D</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -71,15 +71,15 @@
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
-        { src: "./images/layer05.png", z: 0.32, thickness: 0.002 }, // Layer 05: Spessore 2 mm
+        { src: "./images/layer05.png", z: 0.32, thickness: 0.002 }, // Layer 05 (Spessore 2 mm)
         { src: "./images/layer06.png", z: 0.40 }
       ];
 
       const extraOverlayPng = "./images/layer05_extra.png";
       const extraOverlayGif = "./images/layer05_anim.gif";
 
-      // DISTANZA PNG EXTRA DALS LAYER 05 (Modifica questo valore per allontanare/avvicinare)
-      const extraOverlayOffsetZ = 0.03; // 3 cm in avanti rispetto a Layer 05
+      // Distanza della PNG extra in avanti rispetto a Layer 05 (3 cm)
+      const extraOverlayOffsetZ = 0.03; 
 
       const planeWidth = 1;
       const planeHeight = 1;
@@ -128,6 +128,7 @@
             src: url(${layer.src}); 
             transparent: true; 
             alphaTest: 0.5; 
+            side: front;
             depthTest: true;
           `);
         } else {
@@ -152,34 +153,35 @@
         // ==========================================
         if (idx === 4) { 
           
-          // Posizione calcolata per la PNG extra
           const overlayZPos = layer.z + extraOverlayOffsetZ;
 
-          // A) SECONDA PNG (Spessore 2 mm, posizionata a Z = 0.3500)
+          // A) SECONDA PNG EXTRA (Gestita esattamente come layer05 con a-box e spessore 2 mm)
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
-          overlayBox.setAttribute("depth", 0.002);
+          overlayBox.setAttribute("depth", 0.002); // Spessore 2 mm
           overlayBox.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
           overlayBox.setAttribute("material", `
             src: url(${extraOverlayPng}); 
             transparent: true; 
             alphaTest: 0.5; 
+            side: front;
             depthTest: true;
           `);
           overlayBox.setAttribute("render-order", 15);
           targetEntity.appendChild(overlayBox);
 
-          // B) ANIMAZIONE GIF (Posizionata 2 mm davanti alla PNG extra per stare sulla sua faccia frontale)
+          // B) ANIMAZIONE GIF (Posizionata sulla faccia frontale del box Extra)
           const gifPlane = document.createElement("a-plane");
           gifPlane.setAttribute("width", planeWidth);
           gifPlane.setAttribute("height", planeHeight);
-          gifPlane.setAttribute("position", `0 0 ${(overlayZPos + 0.0020).toFixed(4)}`);
+          gifPlane.setAttribute("position", `0 0 ${(overlayZPos + 0.0015).toFixed(4)}`);
           gifPlane.setAttribute("material", `
             shader: gif; 
             src: url(${extraOverlayGif}); 
             transparent: true; 
             alphaTest: 0.5; 
+            side: front;
             depthTest: true;
           `);
           gifPlane.setAttribute("render-order", 16);
