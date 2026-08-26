@@ -3,182 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teatrino di Carta AR - MindAR</title>
+  <title>Diorama WebAR - 6 Livelli</title>
 
+  <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <!-- Componente LERP (Smooth Tracker) -->
+  <script>
+    AFRAME.registerComponent('smooth-tracker', {
+      schema: {
+        factor: { type: 'number', default: 0.35 }
+      },
+      init: function () {
+        this.hasTarget = false;
+        this.el.addEventListener('targetFound', () => { this.hasTarget = true; });
+        this.el.addEventListener('targetLost', () => { this.hasTarget = false; });
+      },
+      tick: function () {
+        if (!this.hasTarget) return;
+
+        const object3D = this.el.object3D;
+        
+        if (this.prevPos) {
+          object3D.position.lerp(this.prevPos, 1 - this.data.factor);
+          object3D.quaternion.slerp(this.prevQuat, 1 - this.data.factor);
+        }
+
+        this.prevPos = object3D.position.clone();
+        this.prevQuat = object3D.quaternion.clone();
+      }
+    });
+  </script>
 
   <style>
     body { margin: 0; overflow: hidden; }
     .a-enter-vr-button { display: none !important; }
-
-    .kolorare-btn {
-      position: absolute;
-      bottom: 16px;
-      right: 16px;
-      z-index: 9999;
-      background: rgba(11, 19, 26, 0.85);
-      color: #ffffff;
-      text-decoration: none;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      padding: 8px 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .kolorare-btn span { color: #e63946; margin-left: 3px; }
   </style>
-
-  <script>
-    AFRAME.registerComponent('png-paper-extrude', {
-      schema: {
-        src: { type: 'string' },
-        depth: { type: 'number', default: 0.01 }, 
-        width: { type: 'number', default: 1.0 },  
-        height: { type: 'number', default: 1.0 }
-      },
-      init: function () {
-        const el = this.el;
-        const data = this.data;
-
-        let imgSrc = data.src;
-        if (data.src.startsWith('#')) {
-          const imgEl = document.querySelector(data.src);
-          if (imgEl) imgSrc = imgEl.getAttribute('src');
-        }
-
-        const loader = new THREE.TextureLoader();
-        loader.load(
-          imgSrc, 
-          (texture) => {
-            if ('colorSpace' in texture && typeof THREE.SRGBColorSpace !== 'undefined') {
-              texture.colorSpace = THREE.SRGBColorSpace;
-            }
-
-            texture.wrapS = THREE.ClampToEdgeWrapping;
-            texture.wrapT = THREE.ClampToEdgeWrapping;
-
-            const geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
-            
-            // MeshBasicMaterial: ignora l'illuminazione e mantiene i colori originali esatti della PNG
-            const paperFrontMaterial = new THREE.MeshBasicMaterial({
-              map: texture,
-              transparent: true,
-              alphaTest: 0.05,
-              side: THREE.FrontSide
-            });
-
-            const paperBackEdgeMaterial = new THREE.MeshBasicMaterial({
-              color: 0xffffff,
-              transparent: true,
-              opacity: 0.0
-            });
-
-            // Assegnazione facce: [Right, Left, Top, Bottom, Front, Back]
-            const materials = [
-              paperBackEdgeMaterial,  
-              paperBackEdgeMaterial,  
-              paperBackEdgeMaterial,  
-              paperBackEdgeMaterial,  
-              paperFrontMaterial,     // Grafica PNG a colori nativi sul davanti
-              paperBackEdgeMaterial   
-            ];
-
-            const mesh = new THREE.Mesh(geometry, materials);
-            el.setObject3D('mesh', mesh);
-          },
-          undefined,
-          (err) => console.error("Errore caricamento texture AR:", imgSrc, err)
-        );
-      }
-    });
-  </script>
 </head>
 <body>
 
-  <a href="https://kolorare.it/" target="_blank" rel="noopener noreferrer" class="kolorare-btn" aria-label="Credits">
-    AR by <span>kolorare</span>
-  </a>
-
+  <!-- Inserisci il percorso del tuo file .mind in imageTargetSrc -->
   <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 10;" 
+    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.001; filterBeta: 0.01; missTolerance: 5;" 
     color-space="sRGB" 
-    renderer="colorManagement: false; antialias: true;" 
+    renderer="colorManagement: true, physicallyCorrectLights; antialias: true;" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Luci 3D rimosse per non alterare i colori originali -->
-
-    <a-entity id="ar-target" mindar-image-target="targetIndex: 0">
-      <a-entity id="diorama-container"></a-entity>
+    <a-entity id="ar-target" mindar-image-target="targetIndex: 0" smooth-tracker="factor: 0.35">
     </a-entity>
 
   </a-scene>
 
   <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      const dioramaContainer = document.querySelector("#diorama-container");
-
-      const SIZE = 1.0;         // 20 cm
-      const STEP_4CM = 0.2;     // 4 cm
-      const DEPTH_2MM = 0.01;   // 2 mm
-
-      // --- BOTTOM-BOX ---
-      const bottomBox = document.createElement("a-entity");
-      bottomBox.setAttribute("png-paper-extrude", `src: images/bottom_box.png; width: ${SIZE}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
-      bottomBox.setAttribute("rotation", "-90 0 0");
-      bottomBox.setAttribute("position", `0 -0.5 0.5`);
-      dioramaContainer.appendChild(bottomBox);
-
-      // --- SPACE01: PARETE SINISTRA ---
-      const space01Left = document.createElement("a-entity");
-      space01Left.setAttribute("png-paper-extrude", `src: images/space01_left.png; width: ${STEP_4CM}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
-      space01Left.setAttribute("rotation", "0 90 0");
-      space01Left.setAttribute("position", `-0.5 0 0.9`);
-      dioramaContainer.appendChild(space01Left);
-
-      // --- SPACE01: BOTTOM DEDICATO ---
-      const space01Bottom = document.createElement("a-entity");
-      space01Bottom.setAttribute("png-paper-extrude", `src: images/space01_bottom.png; width: ${SIZE}; height: ${STEP_4CM}; depth: ${DEPTH_2MM};`);
-      space01Bottom.setAttribute("rotation", "-90 0 0");
-      space01Bottom.setAttribute("position", `0 -0.5 0.9`);
-      dioramaContainer.appendChild(space01Bottom);
+    document.addEventListener("DOMContentLoaded", () => {
+      const targetEntity = document.querySelector("#ar-target");
 
       // ==========================================
-      // LAYER VERTICALI PARALLELI (Space05 -> Space00)
+      // 1. CONFIGURAZIONE DEI 6 LIVELLI PNG
       // ==========================================
+      // Inserisci i percorsi delle tue immagini e la profondità (z).
+      // z = 0 indica il piano dell'immagine target.
+      // Valori di z positivi spingono i livelli verso l'osservatore (in avanti).
       const layersConfig = [
-        { src: "images/space05.png", z: 0.0 },
-        { src: "images/space04.png", z: 0.2 },
-        { src: "images/space03.png", z: 0.4 },
-        { src: "images/space02.png", z: 0.6 },
-
-        // Sub-layer Parallasse Space01
-        { src: "images/space01_a.png", z: 0.800 },
-        { src: "images/space01_b.png", z: 0.815 },
-        { src: "images/space01_c.png", z: 0.830 },
-
-        { src: "images/space00.png", z: 1.0 }
+        { src: "./images/layer01.png", z: 0.00 }, // Sfondo (attaccato al target)
+        { src: "./images/layer02.png", z: 0.08 },
+        { src: "./images/layer03.png", z: 0.16 },
+        { src: "./images/layer04.png", z: 0.24 },
+        { src: "./images/layer05.png", z: 0.32 },
+        { src: "./images/layer06.png", z: 0.40 }  // Primo piano
       ];
 
-      layersConfig.forEach((layer) => {
-        const entity = document.createElement("a-entity");
-        entity.setAttribute("png-paper-extrude", `src: ${layer.src}; width: ${SIZE}; height: ${SIZE}; depth: ${DEPTH_2MM};`);
-        entity.setAttribute("position", `0 0 ${layer.z.toFixed(3)}`);
-        dioramaContainer.appendChild(entity);
+      // Dimensioni del piano AR (1 = uguale alla dimensione del target tracciato)
+      const planeWidth = "1";
+      const planeHeight = "1";
+
+      // ==========================================
+      // 2. GENERAZIONE AUTOMATICA DEI PIANI 3D
+      // ==========================================
+      layersConfig.forEach((layer, idx) => {
+        const plane = document.createElement("a-plane");
+        
+        // Attributi geometrici e sorgente
+        plane.setAttribute("src", layer.src);
+        plane.setAttribute("width", planeWidth);
+        plane.setAttribute("height", planeHeight);
+        plane.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
+        
+        // Trasparenza ottimizzata per evitare glitch visivi tra i layer
+        plane.setAttribute("material", `
+          transparent: true; 
+          alphaTest: 0.5; 
+          side: front;
+          depthTest: true;
+        `);
+        
+        // Garantisce l'ordine di rendering corretto (dal più lontano al più vicino)
+        plane.setAttribute("render-order", 10 + idx);
+        
+        targetEntity.appendChild(plane);
       });
     });
   </script>
+  
 </body>
 </html>
