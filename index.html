@@ -69,12 +69,12 @@
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
-        { src: "./images/layer05.png", z: 0.32, thickness: 0.004 }, // Spessore aumentato a 4 mm
+        { src: "./images/layer05.png", z: 0.32, thickness: 0.004 }, // Spessore 4 mm
         { src: "./images/layer06.png", z: 0.40 }
       ];
 
       const extraOverlayPng = "./images/layer05_extra.png";
-      const leafPng = "./images/leaf.png"; // <-- La tua immagine PNG della foglia
+      const leafPng = "./images/leaf.png"; 
 
       // Distanza ridotta tra Layer05 ed Extra (1 cm)
       const extraOverlayOffsetZ = 0.01; 
@@ -82,7 +82,7 @@
       const planeWidth = 1;
       const planeHeight = 1;
       const bottomTexture = "./images/box_bottom.png"; 
-      const sideTexture = "./images/box_side.png"; // Texture facoltativa per la parete laterale
+      const sideTexture = "./images/layer05-box_side.png"; // <-- Nome aggiornato
 
       // ==========================================
       // 2. CREAZIONE DEL FONDO CON OVERLAP
@@ -181,7 +181,7 @@
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
-          overlayBox.setAttribute("depth", 0.004); // Spessore 4 mm
+          overlayBox.setAttribute("depth", 0.004); 
           overlayBox.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
           overlayBox.setAttribute("material", `
             src: url(${extraOverlayPng}); 
@@ -194,15 +194,15 @@
           overlayBox.setAttribute("render-order", 20);
           targetEntity.appendChild(overlayBox);
 
-          // B) ANIMAZIONE FOGLIE CHE VOLANO (in metri: 0.5cm -> 0.005, 7cm -> 0.07, ecc.)
+          // B) ANIMAZIONE FOGLIE CHE VOLANO
           const startX = 0.005;  // 0.5 cm
           const startY = 0.070;  // 7.0 cm
           const endX   = 0.123;  // 12.3 cm
           const endY   = 0.199;  // 19.9 cm
-          const leafZ  = overlayZPos + 0.003; // leggermente davanti all'Extra
+          const leafZ  = overlayZPos + 0.003; 
 
           const leafPlane = document.createElement("a-plane");
-          leafPlane.setAttribute("width", 0.15);  // Dimensione foglia (15 cm)
+          leafPlane.setAttribute("width", 0.15);  
           leafPlane.setAttribute("height", 0.15);
           leafPlane.setAttribute("position", `${startX} ${startY} ${leafZ.toFixed(4)}`);
           leafPlane.setAttribute("material", `
@@ -213,7 +213,7 @@
             depthTest: true;
           `);
 
-          // Movimento di volo continuo
+          // Movimento di volo
           leafPlane.setAttribute("animation__pos", `
             property: position; 
             from: ${startX} ${startY} ${leafZ.toFixed(4)}; 
@@ -223,7 +223,7 @@
             loop: true;
           `);
 
-          // Lieve rotazione durante il volo per effetto vento
+          // Rotazione dinamica
           leafPlane.setAttribute("animation__rot", `
             property: rotation; 
             from: 0 0 -15; 
