@@ -1,43 +1,196 @@
-// ==========================================
-// SOVRAPPOSIZIONI SUL LAYER 05
-// ==========================================
-if (idx === 4) { 
-  
-  const overlayZPos = layer.z + extraOverlayOffsetZ;
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diorama WebAR - 6 Livelli con Extra Trasparente</title>
 
-  // A) SECONDA PNG EXTRA
-  const overlayBox = document.createElement("a-box");
-  overlayBox.setAttribute("width", planeWidth);
-  overlayBox.setAttribute("height", planeHeight);
-  overlayBox.setAttribute("depth", 0.002);
-  overlayBox.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
-  
-  // ---> MODIFICA QUI PER LA TRASPARENZA <---
-  overlayBox.setAttribute("material", `
-    src: url(${extraOverlayPng}); 
-    transparent: true; 
-    alphaTest: 0.01;        /* Permette alle semitrasparenze PNG di passare */
-    depthWrite: false;      /* FONDAMENTALE: impedisce al box di bloccare visivamente ciò che sta dietro */
-    depthTest: true;
-    side: front;
-  `);
-  
-  overlayBox.setAttribute("render-order", 20); // Mantiene l'ordine di disegno corretto
-  targetEntity.appendChild(overlayBox);
+  <!-- Librerie A-Frame e MindAR -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  <!-- Plugin per supporto GIF animate in A-Frame -->
+  <script src="https://rawgit.com/mayognaise/aframe-gif-shader/master/dist/aframe-gif-shader.min.js"></script>
 
-  // B) ANIMAZIONE GIF
-  const gifPlane = document.createElement("a-plane");
-  gifPlane.setAttribute("width", planeWidth);
-  gifPlane.setAttribute("height", planeHeight);
-  gifPlane.setAttribute("position", `0 0 ${(overlayZPos + 0.0015).toFixed(4)}`);
-  gifPlane.setAttribute("material", `
-    shader: gif; 
-    src: url(${extraOverlayGif}); 
-    transparent: true; 
-    alphaTest: 0.01;
-    depthWrite: false;
-    depthTest: true;
-  `);
-  gifPlane.setAttribute("render-order", 21);
-  targetEntity.appendChild(gifPlane);
-}
+  <!-- Componente LERP (Smooth Tracker) -->
+  <script>
+    AFRAME.registerComponent('smooth-tracker', {
+      schema: {
+        factor: { type: 'number', default: 0.35 }
+      },
+      init: function () {
+        this.hasTarget = false;
+        this.el.addEventListener('targetFound', () => { this.hasTarget = true; });
+        this.el.addEventListener('targetLost', () => { this.hasTarget = false; });
+      },
+      tick: function () {
+        if (!this.hasTarget) return;
+
+        const object3D = this.el.object3D;
+        
+        if (this.prevPos) {
+          object3D.position.lerp(this.prevPos, 1 - this.data.factor);
+          object3D.quaternion.slerp(this.prevQuat, 1 - this.data.factor);
+        }
+
+        this.prevPos = object3D.position.clone();
+        this.prevQuat = object3D.quaternion.clone();
+      }
+    });
+  </script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+    .a-enter-vr-button { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <a-scene 
+    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF: 0.001; filterBeta: 0.01; missTolerance: 5;" 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights; antialias: true;" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="ar-target" mindar-image-target="targetIndex: 0" smooth-tracker="factor: 0.35">
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const targetEntity = document.querySelector("#ar-target");
+
+      // ==========================================
+      // 1. CONFIGURAZIONE DEI LIVELLI PNG
+      // ==========================================
+      const layersConfig = [
+        { src: "./images/layer01.png", z: 0.00 },
+        { src: "./images/layer02.png", z: 0.08 },
+        { src: "./images/layer03.png", z: 0.16 },
+        { src: "./images/layer04.png", z: 0.24 },
+        { src: "./images/layer05.png", z: 0.32, thickness: 0.002 }, // Layer 05 (Spessore 2 mm)
+        { src: "./images/layer06.png", z: 0.40 }
+      ];
+
+      const extraOverlayPng = "./images/layer05_extra.png";
+      const extraOverlayGif = "./images/layer05_anim.gif";
+
+      // Distanza della PNG extra in avanti rispetto a Layer 05 (3 cm)
+      const extraOverlayOffsetZ = 0.03; 
+
+      const planeWidth = 1;
+      const planeHeight = 1;
+      const bottomTexture = "./images/box_bottom.png"; 
+
+      // ==========================================
+      // 2. CREAZIONE DEL FONDO CON OVERLAP
+      // ==========================================
+      const overlapZ = -0.01; 
+      const frontMargin = 0.005; 
+
+      const zBack = layersConfig[0].z + overlapZ; 
+      const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; 
+
+      const bottomLengthExact = zFront - zBack; 
+      const bottomCenterZExact = zBack + (bottomLengthExact / 2); 
+
+      const bottomPlane = document.createElement("a-plane");
+      bottomPlane.setAttribute("width", planeWidth);
+      bottomPlane.setAttribute("height", bottomLengthExact);
+      bottomPlane.setAttribute("position", `0 -${(planeHeight / 2 + 0.001).toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
+      bottomPlane.setAttribute("rotation", "-90 0 0");
+
+      if (bottomTexture) {
+        bottomPlane.setAttribute("src", bottomTexture);
+        bottomPlane.setAttribute("material", "transparent: true; alphaTest: 0.5; side: double; depthTest: true;");
+      } else {
+        bottomPlane.setAttribute("material", "color: #0b131a; roughness: 0.9; side: double; depthTest: true;");
+      }
+
+      targetEntity.appendChild(bottomPlane);
+
+      // ==========================================
+      // 3. GENERAZIONE LAYER E SOVRAPPOSIZIONI
+      // ==========================================
+      layersConfig.forEach((layer, idx) => {
+        let element;
+
+        if (layer.thickness) {
+          element = document.createElement("a-box");
+          element.setAttribute("width", planeWidth);
+          element.setAttribute("height", planeHeight);
+          element.setAttribute("depth", layer.thickness); 
+          element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
+          element.setAttribute("material", `
+            src: url(${layer.src}); 
+            transparent: true; 
+            alphaTest: 0.01; 
+            side: front;
+            depthTest: true;
+          `);
+        } else {
+          element = document.createElement("a-plane");
+          element.setAttribute("src", layer.src);
+          element.setAttribute("width", planeWidth);
+          element.setAttribute("height", planeHeight);
+          element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
+          element.setAttribute("material", `
+            transparent: true; 
+            alphaTest: 0.01; 
+            side: front;
+            depthTest: true;
+          `);
+        }
+        
+        element.setAttribute("render-order", 10 + idx);
+        targetEntity.appendChild(element);
+
+        // ==========================================
+        // SOVRAPPOSIZIONI SUL LAYER 05
+        // ==========================================
+        if (idx === 4) { 
+          
+          const overlayZPos = layer.z + extraOverlayOffsetZ;
+
+          // A) SECONDA PNG EXTRA (Spessore 2 mm con trasparenza Alfa avanzata)
+          const overlayBox = document.createElement("a-box");
+          overlayBox.setAttribute("width", planeWidth);
+          overlayBox.setAttribute("height", planeHeight);
+          overlayBox.setAttribute("depth", 0.002);
+          overlayBox.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
+          overlayBox.setAttribute("material", `
+            src: url(${extraOverlayPng}); 
+            transparent: true; 
+            alphaTest: 0.01; 
+            depthWrite: false; 
+            depthTest: true;
+            side: front;
+          `);
+          overlayBox.setAttribute("render-order", 20);
+          targetEntity.appendChild(overlayBox);
+
+          // B) ANIMAZIONE GIF
+          const gifPlane = document.createElement("a-plane");
+          gifPlane.setAttribute("width", planeWidth);
+          gifPlane.setAttribute("height", planeHeight);
+          gifPlane.setAttribute("position", `0 0 ${(overlayZPos + 0.0015).toFixed(4)}`);
+          gifPlane.setAttribute("material", `
+            shader: gif; 
+            src: url(${extraOverlayGif}); 
+            transparent: true; 
+            alphaTest: 0.01; 
+            depthWrite: false;
+            depthTest: true;
+          `);
+          gifPlane.setAttribute("render-order", 21);
+          targetEntity.appendChild(gifPlane);
+        }
+      });
+    });
+  </script>
+  
+</body>
+</html>
