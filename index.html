@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - 6 Livelli con Spessore e GIF</title>
+  <title>Diorama WebAR - Spessore 2mm per Layer 05 e PNG Extra</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -71,11 +71,10 @@
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
-        { src: "./images/layer05.png", z: 0.32, thickness: 0.002 }, // Spessore 1 mm (0.001 unità)
+        { src: "./images/layer05.png", z: 0.32, thickness: 0.002 }, // Layer 05: Spessore 2 mm
         { src: "./images/layer06.png", z: 0.40 }
       ];
 
-      // File da sovrapporre al Layer 05
       const extraOverlayPng = "./images/layer05_extra.png";
       const extraOverlayGif = "./images/layer05_anim.gif";
 
@@ -116,12 +115,11 @@
       layersConfig.forEach((layer, idx) => {
         let element;
 
-        // Se è definito uno spessore usiamo un BOX, altrimenti un PLANE
         if (layer.thickness) {
           element = document.createElement("a-box");
           element.setAttribute("width", planeWidth);
           element.setAttribute("height", planeHeight);
-          element.setAttribute("depth", layer.thickness); // Spessore 1 mm
+          element.setAttribute("depth", layer.thickness); // Spessore 2 mm
           element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
           element.setAttribute("material", `
             src: url(${layer.src}); 
@@ -149,15 +147,15 @@
         // ==========================================
         // SOVRAPPOSIZIONI SUL LAYER 05
         // ==========================================
-        if (idx === 4) { // Corrisponde a layer05 (indice 4 dell'array)
+        if (idx === 4) { 
           
-          // A) SECONDA PNG (Spessore 1 mm, posizionata subito davanti al layer05)
+          // A) SECONDA PNG: Spessore 2 mm (0.002 unità)
+          // Centro a +2 mm da layer05 per accostare perfettamente le facce
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
-          overlayBox.setAttribute("depth", layer.thickness);
-          // Sfalsata di 1.5 mm in avanti per evitare compenetrazione
-          overlayBox.setAttribute("position", `0 0 ${(layer.z + 0.0015).toFixed(4)}`);
+          overlayBox.setAttribute("depth", 0.002); // Spessore esplicito 2 mm
+          overlayBox.setAttribute("position", `0 0 ${(layer.z + 0.0020).toFixed(4)}`);
           overlayBox.setAttribute("material", `
             src: url(${extraOverlayPng}); 
             transparent: true; 
@@ -167,11 +165,12 @@
           overlayBox.setAttribute("render-order", 15);
           targetEntity.appendChild(overlayBox);
 
-          // B) ANIMAZIONE GIF (Posizionata 1.5 mm davanti alla seconda PNG)
+          // B) ANIMAZIONE GIF
+          // Posizionata subito davanti al secondo box (a +4.0 mm dal centro di layer05)
           const gifPlane = document.createElement("a-plane");
           gifPlane.setAttribute("width", planeWidth);
           gifPlane.setAttribute("height", planeHeight);
-          gifPlane.setAttribute("position", `0 0 ${(layer.z + 0.003).toFixed(4)}`);
+          gifPlane.setAttribute("position", `0 0 ${(layer.z + 0.0040).toFixed(4)}`);
           gifPlane.setAttribute("material", `
             shader: gif; 
             src: url(${extraOverlayGif}); 
