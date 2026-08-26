@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Curva e Bottom Corretti</title>
+  <title>Diorama WebAR - Ripristino Curva e Bottom Standard</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -81,7 +81,7 @@
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. BASE GENERALE E LAYER05_BOTTOM (Con chiusura curva)
+      // 2. BASE GENERALE E LAYER05_BOTTOM
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
@@ -101,12 +101,11 @@
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // B) Striscia Layer05 Bottom (tra Layer05 e Layer06)
+      // B) Striscia Layer05 Bottom (tra Layer05 Z=0.32 e Layer06 Z=0.40)
       const zLayer05 = layersConfig[4].z; // 0.32
       const zLayer06 = layersConfig[5].z; // 0.40
       const stripDepth = zLayer06 - zLayer05; // 0.08
       const stripCenterZ = zLayer05 + (stripDepth / 2); 
-      const curveRadius = stripDepth; 
 
       const layer05BottomPlane = document.createElement("a-plane");
       layer05BottomPlane.setAttribute("width", planeWidth);
@@ -124,40 +123,23 @@
       layer05BottomPlane.setAttribute("render-order", 2);
       targetEntity.appendChild(layer05BottomPlane);
 
-      // C) Spicchio di fondo per chiudere il buco sotto la curva
-      const curveCenterX = -(planeWidth / 2);
-      const curveCenterZ = zLayer05 + curveRadius;
-
-      const bottomCornerCap = document.createElement("a-cylinder");
-      bottomCornerCap.setAttribute("radius", curveRadius);
-      bottomCornerCap.setAttribute("height", 0.001);
-      bottomCornerCap.setAttribute("theta-start", 180);
-      bottomCornerCap.setAttribute("theta-length", 90);
-      bottomCornerCap.setAttribute("position", `${curveCenterX.toFixed(4)} ${(bottomYPos + 0.0005).toFixed(4)} ${curveCenterZ.toFixed(4)}`);
-      bottomCornerCap.setAttribute("material", `
-        src: url(${layer05BottomTexture}); 
-        transparent: true; 
-        alphaTest: 0.01; 
-        depthWrite: false; 
-        depthTest: true;
-        side: double;
-      `);
-      bottomCornerCap.setAttribute("render-order", 2);
-      targetEntity.appendChild(bottomCornerCap);
-
       // ==========================================
-      // 3. RACCORDO CURVO SX (GRAPHICA SPECCHIATA SU Y)
+      // 3. RACCORDO CURVO SX (RIPRISTINATO ALLA VERSIONE PRECEDENTE)
       // ==========================================
-      const wallThickness = 0.004; 
+      const curveRadius = zLayer06 - zLayer05; // 0.08 (8 cm)
+      const wallThickness = 0.004;        // Spessore 4 mm
+      const overlapCorrection = 0.001;     // Tolleranza anti-spazi vuoti
 
-      // Superficie Curva Esterna (scale="-1 1 1" per ribaltare la texture)
+      const curveCenterX = -(planeWidth / 2) + overlapCorrection;
+      const curveCenterZ = zLayer05;
+
+      // Superficie Curva Esterna
       const outerCurvedSide = document.createElement("a-cylinder");
       outerCurvedSide.setAttribute("radius", curveRadius);
       outerCurvedSide.setAttribute("height", planeHeight);
-      outerCurvedSide.setAttribute("theta-start", 180);
+      outerCurvedSide.setAttribute("theta-start", 90);
       outerCurvedSide.setAttribute("theta-length", 90);
       outerCurvedSide.setAttribute("open-ended", "true");
-      outerCurvedSide.setAttribute("scale", "-1 1 1");
       outerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
       outerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
       outerCurvedSide.setAttribute("render-order", 15);
@@ -167,10 +149,9 @@
       const innerCurvedSide = document.createElement("a-cylinder");
       innerCurvedSide.setAttribute("radius", curveRadius - wallThickness);
       innerCurvedSide.setAttribute("height", planeHeight);
-      innerCurvedSide.setAttribute("theta-start", 180);
+      innerCurvedSide.setAttribute("theta-start", 90);
       innerCurvedSide.setAttribute("theta-length", 90);
       innerCurvedSide.setAttribute("open-ended", "true");
-      innerCurvedSide.setAttribute("scale", "-1 1 1");
       innerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
       innerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
       innerCurvedSide.setAttribute("render-order", 14);
@@ -215,7 +196,7 @@
           // Sistema Foglie Multiple (Cadono e svaniscono sotto il fondo)
           const totalLeaves = 5;
           const startCoords = fromTopLeft(0.5, 7.0);   
-          const endCoords   = fromTopLeft(12.3, 22.0);
+          const endCoords   = fromTopLeft(12.3, 22.0); // Y > 20cm spinge la foglia sotto la base
 
           for (let i = 0; i < totalLeaves; i++) {
             const leaf = document.createElement("a-plane");
