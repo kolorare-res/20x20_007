@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Coordinate Foglie da Alto-SX</title>
+  <title>Diorama WebAR - Raccordo Curvo SX e Foglie Animate</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -61,7 +61,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       const targetEntity = document.querySelector("#ar-target");
 
-      // Funzione di conversione: da cm (origine in alto a SX) a coordinate 3D A-Frame
+      // Conversione coordinate: da cm (in alto SX) a 3D A-Frame
       function fromTopLeft(xCm, yCm) {
         return {
           x: (xCm / 100) - 0.5,
@@ -84,7 +84,7 @@
       const extraOverlayPng = "./images/layer05_extra.png";
       const leafPng = "./images/leaf.png"; 
 
-      const extraOverlayOffsetZ = 0.01; // Distanza 1 cm in avanti
+      const extraOverlayOffsetZ = 0.01; 
 
       const planeWidth = 1;
       const planeHeight = 1;
@@ -119,27 +119,38 @@
       targetEntity.appendChild(bottomPlane);
 
       // ==========================================
-      // 3. GENERAZIONE PARETE LATERALE A SINISTRA
+      // 3. RACCORDO CURVO A QUARTO DI CERCHIO (SX)
       // ==========================================
       const zLayer05 = layersConfig[4].z; // 0.32
       const zLayer06 = layersConfig[5].z; // 0.40
-      const sideDepth = zLayer06 - zLayer05; // 0.08 m (8 cm)
-      const sideCenterZ = zLayer05 + (sideDepth / 2); // 0.36
+      const curveRadius = zLayer06 - zLayer05; // Raggio dell'arco = 8 cm (0.08)
 
-      const leftWall = document.createElement("a-plane");
-      leftWall.setAttribute("width", sideDepth);
-      leftWall.setAttribute("height", planeHeight);
-      leftWall.setAttribute("position", `-${(planeWidth / 2).toFixed(4)} 0 ${sideCenterZ.toFixed(4)}`);
-      leftWall.setAttribute("rotation", "0 90 0");
+      // Centro di rotazione posizionato per raccordare layer05 (Z:0.32) e layer06 (Z:0.40)
+      const curveCenterX = -(planeWidth / 2) + curveRadius;
+      const curveCenterZ = zLayer05;
+
+      const curvedSide = document.createElement("a-cylinder");
+      curvedSide.setAttribute("radius", curveRadius);
+      curvedSide.setAttribute("height", planeHeight);
+      curvedSide.setAttribute("theta-start", 180);
+      curvedSide.setAttribute("theta-length", 90); // 90 gradi = Quarto di cerchio
+      curvedSide.setAttribute("open-ended", "true"); // Cilindro cavo senza basi
+      curvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
+      curvedSide.setAttribute("rotation", "0 0 0");
 
       if (sideTexture) {
-        leftWall.setAttribute("src", sideTexture);
-        leftWall.setAttribute("material", "transparent: true; alphaTest: 0.5; side: double; depthTest: true;");
+        curvedSide.setAttribute("material", `
+          src: url(${sideTexture}); 
+          transparent: true; 
+          alphaTest: 0.01; 
+          side: double;
+          depthTest: true;
+        `);
       } else {
-        leftWall.setAttribute("material", "color: #0b131a; roughness: 0.9; side: double; depthTest: true;");
+        curvedSide.setAttribute("material", "color: #0b131a; roughness: 0.9; side: double; depthTest: true;");
       }
 
-      targetEntity.appendChild(leftWall);
+      targetEntity.appendChild(curvedSide);
 
       // ==========================================
       // 4. GENERAZIONE LAYER E SOVRAPPOSIZIONI
@@ -201,13 +212,13 @@
           overlayBox.setAttribute("render-order", 20);
           targetEntity.appendChild(overlayBox);
 
-          // B) ANIMAZIONE FOGLIE CHE VOLANO (Coordinate convertite da in alto a SX)
-          const startPos = fromTopLeft(0.5, 7.0);   // Partenza (X: 0.5cm, Y: 7.0cm da alto SX)
-          const endPos   = fromTopLeft(12.3, 19.9); // Arrivo (X: 12.3cm, Y: 19.9cm da alto SX)
+          // B) ANIMAZIONE FOGLIE CHE VOLANO
+          const startPos = fromTopLeft(0.5, 7.0);   
+          const endPos   = fromTopLeft(12.3, 19.9); 
           const leafZ    = overlayZPos + 0.003; 
 
           const leafPlane = document.createElement("a-plane");
-          leafPlane.setAttribute("width", 0.10);  // Dimensione foglia (10 cm)
+          leafPlane.setAttribute("width", 0.10);  
           leafPlane.setAttribute("height", 0.10);
           leafPlane.setAttribute("position", `${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}`);
           leafPlane.setAttribute("material", `
@@ -218,7 +229,6 @@
             depthTest: true;
           `);
 
-          // Movimento di volo
           leafPlane.setAttribute("animation__pos", `
             property: position; 
             from: ${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}; 
@@ -228,7 +238,6 @@
             loop: true;
           `);
 
-          // Rotazione dinamica
           leafPlane.setAttribute("animation__rot", `
             property: rotation; 
             from: 0 0 -15; 
