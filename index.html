@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Layer05 Curva SX e Bottom Perfetti</title>
+  <title>Diorama WebAR - Curva e Bottom Corretti</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -81,7 +81,7 @@
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. CREAZIONE DEL FONDO CON OVERLAP E LAYER05 BOTTOM
+      // 2. CREAZIONE DEL FONDO GENERALE + LAYER05 BOTTOM
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
@@ -91,7 +91,7 @@
       const bottomCenterZExact = zBack + (bottomLengthExact / 2); 
       const bottomYPos = -(planeHeight / 2 + 0.001);
 
-      // Piano Base generale
+      // Piano Base Generale
       const bottomPlane = document.createElement("a-plane");
       bottomPlane.setAttribute("width", planeWidth);
       bottomPlane.setAttribute("height", bottomLengthExact);
@@ -101,13 +101,14 @@
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // Striscia Layer05 Bottom (Proporzionata 1024x204px)
-      const stripWidth = 1.0; 
-      const stripDepth = 0.20; 
-      const stripCenterZ = layersConfig[4].z + (stripDepth / 2);
+      // Striscia Layer05 Bottom: Compresa ESATTAMENTE tra Layer05 (Z=0.32) e Layer06 (Z=0.40)
+      const zLayer05 = layersConfig[4].z; // 0.32
+      const zLayer06 = layersConfig[5].z; // 0.40
+      const stripDepth = zLayer06 - zLayer05; // 0.08
+      const stripCenterZ = zLayer05 + (stripDepth / 2); 
 
       const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", stripWidth);
+      layer05BottomPlane.setAttribute("width", planeWidth);
       layer05BottomPlane.setAttribute("height", stripDepth);
       layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
       layer05BottomPlane.setAttribute("rotation", "-90 0 0");
@@ -123,22 +124,19 @@
       targetEntity.appendChild(layer05BottomPlane);
 
       // ==========================================
-      // 3. RACCORDO CURVO SX (PANCIA ESTERNA DA LAYER05 A Z=0.40)
+      // 3. RACCORDO CURVO SX (ALLINEATO SECONDO IL TRACCIATO ROSSO)
       // ==========================================
-      const zLayer05 = layersConfig[4].z; // 0.32
-      const zTarget = 0.40;               // Arrivo in avanti
-      const curveRadius = zTarget - zLayer05; // 0.08 (8 cm)
-      const wallThickness = 0.004;        // Spessore 4 mm
-      const overlapCorrection = 0.001;     // Tolleranza anti-spazi vuoti
+      const curveRadius = zLayer06 - zLayer05; // 0.08
+      const wallThickness = 0.004; 
 
-      const curveCenterX = -(planeWidth / 2) + overlapCorrection;
-      const curveCenterZ = zLayer05;
+      const curveCenterX = -(planeWidth / 2);
+      const curveCenterZ = zLayer05 + curveRadius;
 
       // Superficie Curva Esterna
       const outerCurvedSide = document.createElement("a-cylinder");
       outerCurvedSide.setAttribute("radius", curveRadius);
       outerCurvedSide.setAttribute("height", planeHeight);
-      outerCurvedSide.setAttribute("theta-start", 90);
+      outerCurvedSide.setAttribute("theta-start", 180);
       outerCurvedSide.setAttribute("theta-length", 90);
       outerCurvedSide.setAttribute("open-ended", "true");
       outerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
@@ -150,7 +148,7 @@
       const innerCurvedSide = document.createElement("a-cylinder");
       innerCurvedSide.setAttribute("radius", curveRadius - wallThickness);
       innerCurvedSide.setAttribute("height", planeHeight);
-      innerCurvedSide.setAttribute("theta-start", 90);
+      innerCurvedSide.setAttribute("theta-start", 180);
       innerCurvedSide.setAttribute("theta-length", 90);
       innerCurvedSide.setAttribute("open-ended", "true");
       innerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
@@ -159,7 +157,7 @@
       targetEntity.appendChild(innerCurvedSide);
 
       // ==========================================
-      // 4. GENERAZIONE LAYER E SOVRAPPOSIZIONI
+      // 4. GENERAZIONE LAYER E ANIMAZIONE FOGLIE MULTIPLE
       // ==========================================
       layersConfig.forEach((layer, idx) => {
         let element;
@@ -183,6 +181,8 @@
 
         if (idx === 4) { 
           const overlayZPos = layer.z + extraOverlayOffsetZ;
+
+          // Box Extra Overlay
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
@@ -192,19 +192,47 @@
           overlayBox.setAttribute("render-order", 20);
           targetEntity.appendChild(overlayBox);
 
-          const startPos = fromTopLeft(0.5, 7.0);   
-          const endPos   = fromTopLeft(12.3, 19.9); 
-          const leafZ    = overlayZPos + 0.003; 
+          // Sistema Foglie Multiple (Cadono e svaniscono sotto il fondo)
+          const totalLeaves = 5;
+          const startCoords = fromTopLeft(0.5, 7.0);   
+          const endCoords   = fromTopLeft(12.3, 22.0); // Y > 20cm spinge la foglia sotto la base
 
-          const leafPlane = document.createElement("a-plane");
-          leafPlane.setAttribute("width", 0.10);  
-          leafPlane.setAttribute("height", 0.10);
-          leafPlane.setAttribute("position", `${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}`);
-          leafPlane.setAttribute("material", `src: url(${leafPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true;`);
-          leafPlane.setAttribute("animation__pos", `property: position; from: ${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}; to: ${endPos.x.toFixed(4)} ${endPos.y.toFixed(4)} ${leafZ.toFixed(4)}; dur: 3500; easing: easeInOutQuad; loop: true;`);
-          leafPlane.setAttribute("animation__rot", `property: rotation; from: 0 0 -15; to: 0 0 25; dur: 1750; dir: alternate; easing: easeInOutSine; loop: true;`);
-          leafPlane.setAttribute("render-order", 21);
-          targetEntity.appendChild(leafPlane);
+          for (let i = 0; i < totalLeaves; i++) {
+            const leaf = document.createElement("a-plane");
+            const randomDelay = i * 800 + Math.random() * 400;
+            const randomDuration = 3200 + Math.random() * 1000;
+            const randomScale = 0.06 + Math.random() * 0.04;
+            const offsetX = (Math.random() - 0.5) * 0.05;
+            const leafZ = overlayZPos + 0.003 + (i * 0.0005);
+
+            leaf.setAttribute("width", randomScale);
+            leaf.setAttribute("height", randomScale);
+            leaf.setAttribute("position", `${(startCoords.x + offsetX).toFixed(4)} ${startCoords.y.toFixed(4)} ${leafZ.toFixed(4)}`);
+            leaf.setAttribute("material", `src: url(${leafPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true;`);
+
+            leaf.setAttribute("animation__pos", `
+              property: position; 
+              from: ${(startCoords.x + offsetX).toFixed(4)} ${startCoords.y.toFixed(4)} ${leafZ.toFixed(4)}; 
+              to: ${(endCoords.x + offsetX).toFixed(4)} ${endCoords.y.toFixed(4)} ${leafZ.toFixed(4)}; 
+              dur: ${randomDuration}; 
+              delay: ${randomDelay};
+              easing: easeInQuad; 
+              loop: true;
+            `);
+
+            leaf.setAttribute("animation__rot", `
+              property: rotation; 
+              from: 0 0 ${-20 + Math.random() * 10}; 
+              to: 0 0 ${30 + Math.random() * 20}; 
+              dur: ${1200 + Math.random() * 600}; 
+              dir: alternate; 
+              easing: easeInOutSine; 
+              loop: true;
+            `);
+
+            leaf.setAttribute("render-order", 21);
+            targetEntity.appendChild(leaf);
+          }
         }
       });
     });
