@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Raccordo Curvo Sovrapposto a Layer05</title>
+  <title>Diorama WebAR - Layer05 Curva SX e Bottom Perfetti</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -12,9 +12,7 @@
   <!-- Componente LERP (Smooth Tracker) -->
   <script>
     AFRAME.registerComponent('smooth-tracker', {
-      schema: {
-        factor: { type: 'number', default: 0.35 }
-      },
+      schema: { factor: { type: 'number', default: 0.35 } },
       init: function () {
         this.hasTarget = false;
         this.el.addEventListener('targetFound', () => { this.hasTarget = true; });
@@ -22,14 +20,11 @@
       },
       tick: function () {
         if (!this.hasTarget) return;
-
         const object3D = this.el.object3D;
-        
         if (this.prevPos) {
           object3D.position.lerp(this.prevPos, 1 - this.data.factor);
           object3D.quaternion.slerp(this.prevQuat, 1 - this.data.factor);
         }
-
         this.prevPos = object3D.position.clone();
         this.prevQuat = object3D.quaternion.clone();
       }
@@ -51,9 +46,7 @@
     device-orientation-permission-ui="enabled: false">
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <a-entity id="ar-target" mindar-image-target="targetIndex: 0" smooth-tracker="factor: 0.35">
-    </a-entity>
+    <a-entity id="ar-target" mindar-image-target="targetIndex: 0" smooth-tracker="factor: 0.35"></a-entity>
 
   </a-scene>
 
@@ -62,10 +55,7 @@
       const targetEntity = document.querySelector("#ar-target");
 
       function fromTopLeft(xCm, yCm) {
-        return {
-          x: (xCm / 100) - 0.5,
-          y: 0.5 - (yCm / 100)
-        };
+        return { x: (xCm / 100) - 0.5, y: 0.5 - (yCm / 100) };
       }
 
       // ==========================================
@@ -82,7 +72,6 @@
 
       const extraOverlayPng = "./images/layer05_extra.png";
       const leafPng = "./images/leaf.png"; 
-
       const extraOverlayOffsetZ = 0.01; 
 
       const planeWidth = 1;
@@ -92,39 +81,35 @@
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. CREAZIONE DEL FONDO CON OVERLAP + LAYER05 BOTTOM
+      // 2. CREAZIONE DEL FONDO CON OVERLAP E LAYER05 BOTTOM
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
-
       const zBack = layersConfig[0].z + overlapZ; 
       const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; 
-
       const bottomLengthExact = zFront - zBack; 
       const bottomCenterZExact = zBack + (bottomLengthExact / 2); 
       const bottomYPos = -(planeHeight / 2 + 0.001);
 
-      // Base principale
+      // Piano Base generale
       const bottomPlane = document.createElement("a-plane");
       bottomPlane.setAttribute("width", planeWidth);
       bottomPlane.setAttribute("height", bottomLengthExact);
       bottomPlane.setAttribute("position", `0 ${bottomYPos.toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
       bottomPlane.setAttribute("rotation", "-90 0 0");
-
-      if (bottomTexture) {
-        bottomPlane.setAttribute("src", bottomTexture);
-        bottomPlane.setAttribute("material", "transparent: true; alphaTest: 0.5; side: double; depthTest: true;");
-      } else {
-        bottomPlane.setAttribute("material", "color: #0b131a; roughness: 0.9; side: double; depthTest: true;");
-      }
+      bottomPlane.setAttribute("material", `src: url(${bottomTexture}); transparent: true; alphaTest: 0.5; side: double; depthTest: true;`);
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // Overlay fondo layer05
+      // Striscia Layer05 Bottom (Proporzionata 1024x204px)
+      const stripWidth = 1.0; 
+      const stripDepth = 0.20; 
+      const stripCenterZ = layersConfig[4].z + (stripDepth / 2);
+
       const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", planeWidth);
-      layer05BottomPlane.setAttribute("height", bottomLengthExact);
-      layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
+      layer05BottomPlane.setAttribute("width", stripWidth);
+      layer05BottomPlane.setAttribute("height", stripDepth);
+      layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
       layer05BottomPlane.setAttribute("rotation", "-90 0 0");
       layer05BottomPlane.setAttribute("material", `
         src: url(${layer05BottomTexture}); 
@@ -138,15 +123,16 @@
       targetEntity.appendChild(layer05BottomPlane);
 
       // ==========================================
-      // 3. RACCORDO CURVO SX (SOVRAPPOSTO A LAYER05 TOWARDS USER)
+      // 3. RACCORDO CURVO SX (PANCIA ESTERNA DA LAYER05 A Z=0.40)
       // ==========================================
       const zLayer05 = layersConfig[4].z; // 0.32
-      const curveRadius = 0.08; // Raggio dell'arco
-      const wallThickness = 0.004; // Spessore 4mm
+      const zTarget = 0.40;               // Arrivo in avanti
+      const curveRadius = zTarget - zLayer05; // 0.08 (8 cm)
+      const wallThickness = 0.004;        // Spessore 4 mm
+      const overlapCorrection = 0.001;     // Tolleranza anti-spazi vuoti
 
-      // Centro del cilindro: agganciato al bordo sinistro e al piano Z di layer05
-      const curveCenterX = -(planeWidth / 2) + curveRadius;
-      const curveCenterZ = zLayer05 + curveRadius;
+      const curveCenterX = -(planeWidth / 2) + overlapCorrection;
+      const curveCenterZ = zLayer05;
 
       // Superficie Curva Esterna
       const outerCurvedSide = document.createElement("a-cylinder");
@@ -156,17 +142,11 @@
       outerCurvedSide.setAttribute("theta-length", 90);
       outerCurvedSide.setAttribute("open-ended", "true");
       outerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
-      outerCurvedSide.setAttribute("material", `
-        src: url(${sideTexture}); 
-        transparent: true; 
-        alphaTest: 0.01; 
-        side: double;
-        depthTest: true;
-      `);
+      outerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
       outerCurvedSide.setAttribute("render-order", 15);
       targetEntity.appendChild(outerCurvedSide);
 
-      // Superficie Curva Interna (Crea lo spessore di 4 mm)
+      // Superficie Curva Interna (Spessore 4 mm)
       const innerCurvedSide = document.createElement("a-cylinder");
       innerCurvedSide.setAttribute("radius", curveRadius - wallThickness);
       innerCurvedSide.setAttribute("height", planeHeight);
@@ -174,13 +154,7 @@
       innerCurvedSide.setAttribute("theta-length", 90);
       innerCurvedSide.setAttribute("open-ended", "true");
       innerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
-      innerCurvedSide.setAttribute("material", `
-        src: url(${sideTexture}); 
-        transparent: true; 
-        alphaTest: 0.01; 
-        side: double;
-        depthTest: true;
-      `);
+      innerCurvedSide.setAttribute("material", `src: url(${sideTexture}); transparent: true; alphaTest: 0.01; side: double; depthTest: true;`);
       innerCurvedSide.setAttribute("render-order", 14);
       targetEntity.appendChild(innerCurvedSide);
 
@@ -189,53 +163,32 @@
       // ==========================================
       layersConfig.forEach((layer, idx) => {
         let element;
-
         if (layer.thickness) {
           element = document.createElement("a-box");
           element.setAttribute("width", planeWidth);
           element.setAttribute("height", planeHeight);
           element.setAttribute("depth", layer.thickness); 
           element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
-          element.setAttribute("material", `
-            src: url(${layer.src}); 
-            transparent: true; 
-            alphaTest: 0.01; 
-            side: front;
-            depthTest: true;
-          `);
+          element.setAttribute("material", `src: url(${layer.src}); transparent: true; alphaTest: 0.01; side: front; depthTest: true;`);
         } else {
           element = document.createElement("a-plane");
           element.setAttribute("src", layer.src);
           element.setAttribute("width", planeWidth);
           element.setAttribute("height", planeHeight);
           element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
-          element.setAttribute("material", `
-            transparent: true; 
-            alphaTest: 0.01; 
-            side: front;
-            depthTest: true;
-          `);
+          element.setAttribute("material", `transparent: true; alphaTest: 0.01; side: front; depthTest: true;`);
         }
-        
         element.setAttribute("render-order", 10 + idx);
         targetEntity.appendChild(element);
 
         if (idx === 4) { 
           const overlayZPos = layer.z + extraOverlayOffsetZ;
-
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
           overlayBox.setAttribute("depth", 0.004); 
           overlayBox.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
-          overlayBox.setAttribute("material", `
-            src: url(${extraOverlayPng}); 
-            transparent: true; 
-            alphaTest: 0.01; 
-            depthWrite: false; 
-            depthTest: true;
-            side: front;
-          `);
+          overlayBox.setAttribute("material", `src: url(${extraOverlayPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true; side: front;`);
           overlayBox.setAttribute("render-order", 20);
           targetEntity.appendChild(overlayBox);
 
@@ -247,39 +200,14 @@
           leafPlane.setAttribute("width", 0.10);  
           leafPlane.setAttribute("height", 0.10);
           leafPlane.setAttribute("position", `${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}`);
-          leafPlane.setAttribute("material", `
-            src: url(${leafPng}); 
-            transparent: true; 
-            alphaTest: 0.01; 
-            depthWrite: false;
-            depthTest: true;
-          `);
-
-          leafPlane.setAttribute("animation__pos", `
-            property: position; 
-            from: ${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}; 
-            to: ${endPos.x.toFixed(4)} ${endPos.y.toFixed(4)} ${leafZ.toFixed(4)}; 
-            dur: 3500; 
-            easing: easeInOutQuad; 
-            loop: true;
-          `);
-
-          leafPlane.setAttribute("animation__rot", `
-            property: rotation; 
-            from: 0 0 -15; 
-            to: 0 0 25; 
-            dur: 1750; 
-            dir: alternate; 
-            easing: easeInOutSine; 
-            loop: true;
-          `);
-
+          leafPlane.setAttribute("material", `src: url(${leafPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true;`);
+          leafPlane.setAttribute("animation__pos", `property: position; from: ${startPos.x.toFixed(4)} ${startPos.y.toFixed(4)} ${leafZ.toFixed(4)}; to: ${endPos.x.toFixed(4)} ${endPos.y.toFixed(4)} ${leafZ.toFixed(4)}; dur: 3500; easing: easeInOutQuad; loop: true;`);
+          leafPlane.setAttribute("animation__rot", `property: rotation; from: 0 0 -15; to: 0 0 25; dur: 1750; dir: alternate; easing: easeInOutSine; loop: true;`);
           leafPlane.setAttribute("render-order", 21);
           targetEntity.appendChild(leafPlane);
         }
       });
     });
   </script>
-  
 </body>
 </html>
