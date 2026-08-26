@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - 6 Livelli con Fondo Sovrapposto</title>
+  <title>Diorama WebAR - 6 Livelli con Spessore e GIF</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  <!-- Plugin per supporto GIF animate in A-Frame -->
+  <script src="https://rawgit.com/mayognaise/aframe-gif-shader/master/dist/aframe-gif-shader.min.js"></script>
 
   <!-- Componente LERP (Smooth Tracker) -->
   <script>
@@ -62,16 +64,20 @@
       const targetEntity = document.querySelector("#ar-target");
 
       // ==========================================
-      // 1. CONFIGURAZIONE DEI 6 LIVELLI PNG
+      // 1. CONFIGURAZIONE DEI LIVELLI PNG
       // ==========================================
       const layersConfig = [
-        { src: "./images/layer01.png", z: 0.00 }, // Sfondo scatola
+        { src: "./images/layer01.png", z: 0.00 },
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
-        { src: "./images/layer05.png", z: 0.32 },
-        { src: "./images/layer06.png", z: 0.40 }  // Bordo frontale
+        { src: "./images/layer05.png", z: 0.32, thickness: 0.001 }, // Spessore 1 mm (0.001 unità)
+        { src: "./images/layer06.png", z: 0.40 }
       ];
+
+      // File da sovrapporre al Layer 05
+      const extraOverlayPng = "./images/layer05_extra.png";
+      const extraOverlayGif = "./images/layer05_anim.gif";
 
       const planeWidth = 1;
       const planeHeight = 1;
@@ -80,20 +86,18 @@
       // ==========================================
       // 2. CREAZIONE DEL FONDO CON OVERLAP
       // ==========================================
-      const overlapZ = -0.01; // Spinge la base 1cm dietro il Layer01 (Z = -0.01)
-      const frontMargin = 0.005; // 0.5cm di margine extra sul fronte per chiudere perfettamente
+      const overlapZ = -0.01; 
+      const frontMargin = 0.005; 
 
-      const zBack = layersConfig[0].z + overlapZ; // Inizio reale (-0.01)
-      const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; // Fine reale (0.405)
+      const zBack = layersConfig[0].z + overlapZ; 
+      const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; 
 
-      const bottomLengthExact = zFront - zBack; // Lunghezza totale corretta
-      const bottomCenterZExact = zBack + (bottomLengthExact / 2); // Centro preciso
+      const bottomLengthExact = zFront - zBack; 
+      const bottomCenterZExact = zBack + (bottomLengthExact / 2); 
 
       const bottomPlane = document.createElement("a-plane");
       bottomPlane.setAttribute("width", planeWidth);
       bottomPlane.setAttribute("height", bottomLengthExact);
-      
-      // Abbassato leggermente sull'asse Y (-0.501) per evitare intersezioni con il bordo inferiore dei layer
       bottomPlane.setAttribute("position", `0 -${(planeHeight / 2 + 0.001).toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
       bottomPlane.setAttribute("rotation", "-90 0 0");
 
@@ -107,26 +111,77 @@
       targetEntity.appendChild(bottomPlane);
 
       // ==========================================
-      // 3. GENERAZIONE DEI 6 PIANI (LAYER PNG)
+      // 3. GENERAZIONE LAYER E SOVRAPPOSIZIONI
       // ==========================================
       layersConfig.forEach((layer, idx) => {
-        const plane = document.createElement("a-plane");
+        let element;
+
+        // Se è definito uno spessore usiamo un BOX, altrimenti un PLANE
+        if (layer.thickness) {
+          element = document.createElement("a-box");
+          element.setAttribute("width", planeWidth);
+          element.setAttribute("height", planeHeight);
+          element.setAttribute("depth", layer.thickness); // Spessore 1 mm
+          element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
+          element.setAttribute("material", `
+            src: url(${layer.src}); 
+            transparent: true; 
+            alphaTest: 0.5; 
+            depthTest: true;
+          `);
+        } else {
+          element = document.createElement("a-plane");
+          element.setAttribute("src", layer.src);
+          element.setAttribute("width", planeWidth);
+          element.setAttribute("height", planeHeight);
+          element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
+          element.setAttribute("material", `
+            transparent: true; 
+            alphaTest: 0.5; 
+            side: front;
+            depthTest: true;
+          `);
+        }
         
-        plane.setAttribute("src", layer.src);
-        plane.setAttribute("width", planeWidth);
-        plane.setAttribute("height", planeHeight);
-        plane.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
-        
-        plane.setAttribute("material", `
-          transparent: true; 
-          alphaTest: 0.5; 
-          side: front;
-          depthTest: true;
-        `);
-        
-        plane.setAttribute("render-order", 10 + idx);
-        
-        targetEntity.appendChild(plane);
+        element.setAttribute("render-order", 10 + idx);
+        targetEntity.appendChild(element);
+
+        // ==========================================
+        // SOVRAPPOSIZIONI SUL LAYER 05
+        // ==========================================
+        if (idx === 4) { // Corrisponde a layer05 (indice 4 dell'array)
+          
+          // A) SECONDA PNG (Spessore 1 mm, posizionata subito davanti al layer05)
+          const overlayBox = document.createElement("a-box");
+          overlayBox.setAttribute("width", planeWidth);
+          overlayBox.setAttribute("height", planeHeight);
+          overlayBox.setAttribute("depth", layer.thickness);
+          // Sfalsata di 1.5 mm in avanti per evitare compenetrazione
+          overlayBox.setAttribute("position", `0 0 ${(layer.z + 0.0015).toFixed(4)}`);
+          overlayBox.setAttribute("material", `
+            src: url(${extraOverlayPng}); 
+            transparent: true; 
+            alphaTest: 0.5; 
+            depthTest: true;
+          `);
+          overlayBox.setAttribute("render-order", 15);
+          targetEntity.appendChild(overlayBox);
+
+          // B) ANIMAZIONE GIF (Posizionata 1.5 mm davanti alla seconda PNG)
+          const gifPlane = document.createElement("a-plane");
+          gifPlane.setAttribute("width", planeWidth);
+          gifPlane.setAttribute("height", planeHeight);
+          gifPlane.setAttribute("position", `0 0 ${(layer.z + 0.003).toFixed(4)}`);
+          gifPlane.setAttribute("material", `
+            shader: gif; 
+            src: url(${extraOverlayGif}); 
+            transparent: true; 
+            alphaTest: 0.5; 
+            depthTest: true;
+          `);
+          gifPlane.setAttribute("render-order", 16);
+          targetEntity.appendChild(gifPlane);
+        }
       });
     });
   </script>
