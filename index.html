@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Ripristino Curva e Bottom Standard</title>
+  <title>Diorama WebAR - Geometria Corretta 20x4cm</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -74,14 +74,14 @@
       const leafPng = "./images/leaf.png"; 
       const extraOverlayOffsetZ = 0.01; 
 
-      const planeWidth = 1;
+      const planeWidth = 1;  // Unità relativa (100% della larghezza target)
       const planeHeight = 1;
       const bottomTexture = "./images/box_bottom.png"; 
       const layer05BottomTexture = "./images/layer05_bottom.png"; 
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. BASE GENERALE E LAYER05_BOTTOM
+      // 2. BASE GENERALE E LAYER05_BOTTOM (Con extra spicchio 4cm SX)
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
@@ -101,16 +101,17 @@
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // B) Striscia Layer05 Bottom (tra Layer05 Z=0.32 e Layer06 Z=0.40)
+      // B) Layer05 Bottom (Tela 24cm x 4cm per ospitare i 20cm base + 4cm di spicchio)
       const zLayer05 = layersConfig[4].z; // 0.32
-      const zLayer06 = layersConfig[5].z; // 0.40
-      const stripDepth = zLayer06 - zLayer05; // 0.08
+      const stripDepth = 0.04;            // Profondità 4 cm (0.04m)
+      const totalBottomWidth = planeWidth + stripDepth; // 1.04m totale (20cm + 4cm in scala)
       const stripCenterZ = zLayer05 + (stripDepth / 2); 
 
       const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", planeWidth);
+      layer05BottomPlane.setAttribute("width", totalBottomWidth);
       layer05BottomPlane.setAttribute("height", stripDepth);
-      layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
+      // Sfasato a sinistra di mezza misura dello spicchio (-0.02) per allineare i 20cm al box
+      layer05BottomPlane.setAttribute("position", `-0.02 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
       layer05BottomPlane.setAttribute("rotation", "-90 0 0");
       layer05BottomPlane.setAttribute("material", `
         src: url(${layer05BottomTexture}); 
@@ -124,11 +125,11 @@
       targetEntity.appendChild(layer05BottomPlane);
 
       // ==========================================
-      // 3. RACCORDO CURVO SX (RIPRISTINATO ALLA VERSIONE PRECEDENTE)
+      // 3. RACCORDO CURVO SX (Ripristinato)
       // ==========================================
-      const curveRadius = zLayer06 - zLayer05; // 0.08 (8 cm)
-      const wallThickness = 0.004;        // Spessore 4 mm
-      const overlapCorrection = 0.001;     // Tolleranza anti-spazi vuoti
+      const curveRadius = stripDepth; // Raggio 4 cm (0.04m)
+      const wallThickness = 0.004;    // Spessore 4 mm
+      const overlapCorrection = 0.001; // Tolleranza anti-spazi vuoti
 
       const curveCenterX = -(planeWidth / 2) + overlapCorrection;
       const curveCenterZ = zLayer05;
@@ -196,7 +197,7 @@
           // Sistema Foglie Multiple (Cadono e svaniscono sotto il fondo)
           const totalLeaves = 5;
           const startCoords = fromTopLeft(0.5, 7.0);   
-          const endCoords   = fromTopLeft(12.3, 22.0); // Y > 20cm spinge la foglia sotto la base
+          const endCoords   = fromTopLeft(12.3, 22.0); // Y > 20cm fa sparire la foglia dietro la base
 
           for (let i = 0; i < totalLeaves; i++) {
             const leaf = document.createElement("a-plane");
