@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Lato SX Perpendicolare</title>
+  <title>Diorama WebAR - Misure Proporzionate 20x4 cm</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -57,26 +57,31 @@
       // ==========================================
       // 1. CONFIGURAZIONE DEI LIVELLI PNG
       // ==========================================
+      // La distanza tra Layer 05 e Layer 06 deve essere di 0.20 unità per corrispondere a 4 cm
       const layersConfig = [
         { src: "./images/layer01.png", z: 0.00 },
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
         { src: "./images/layer05.png", z: 0.32, thickness: 0.004 },
-        { src: "./images/layer06.png", z: 0.36 } 
+        { src: "./images/layer06.png", z: 0.52 } // Z = 0.32 + 0.20 (4 cm)
       ];
 
       const extraOverlayPng = "./images/layer05_extra.png";
       const extraOverlayOffsetZ = 0.01; 
 
-      const planeWidth = 1;  // Larghezza target (20 cm)
-      const planeHeight = 1;
+      const planeWidth = 1;  // 1.0 unità = 20 cm reali
+      const planeHeight = 1; // 1.0 unità = 20 cm reali
+      
+      // 4 cm reali in scala A-Frame (4 / 20 = 0.20)
+      const depth4cmRel = 0.20; 
+
       const bottomTexture = "./images/box_bottom.png"; 
       const layer05BottomTexture = "./images/layer05_bottom.png"; 
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. BASE GENERALE E LAYER05_BOTTOM (20cm x 4cm)
+      // 2. BASE GENERALE E LAYER05_BOTTOM (1024x204 px -> 20x4 cm)
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
@@ -96,16 +101,13 @@
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // B) Layer05 Bottom (Rettangolo 20cm x 4cm)
+      // B) Layer05 Bottom (Misure in scala: 1.0 x 0.20)
       const zLayer05 = layersConfig[4].z; // 0.32
-      const zLayer06 = layersConfig[5].z; // 0.36
-      const stripDepthRel = zLayer06 - zLayer05; // 0.04 (4 cm)
-      const stripCenterZ = zLayer05 + (stripDepthRel / 2); 
+      const stripCenterZ = zLayer05 + (depth4cmRel / 2); // 0.32 + 0.10 = 0.42
 
       const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", planeWidth);
-      layer05BottomPlane.setAttribute("height", stripDepthRel);
-      // Allineato perfettamente al centro (X = 0)
+      layer05BottomPlane.setAttribute("width", planeWidth);      // 1.0 (20 cm)
+      layer05BottomPlane.setAttribute("height", depth4cmRel);     // 0.20 (4 cm)
       layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
       layer05BottomPlane.setAttribute("rotation", "-90 0 0");
       layer05BottomPlane.setAttribute("material", `
@@ -120,17 +122,15 @@
       targetEntity.appendChild(layer05BottomPlane);
 
       // ==========================================
-      // 3. PARETE LATERALE PERPENDICOLARE (SX)
+      // 3. PARETE LATERALE PERPENDICOLARE SX (204x1024 px -> 4x20 cm)
       // ==========================================
-      const sideWidth = stripDepthRel; // Profondità di 4 cm (0.04)
-      const sideCenterX = -(planeWidth / 2); // Sul bordo sinistro (-0.5)
+      const sideCenterX = -(planeWidth / 2); // -0.5 (bordo sinistro)
 
       const straightSide = document.createElement("a-plane");
-      straightSide.setAttribute("width", sideWidth);
-      straightSide.setAttribute("height", planeHeight);
-      // Ruotato di 90° lungo l'asse Y per essere verticale lungo la profondità
-      straightSide.setAttribute("rotation", "0 90 0");
+      straightSide.setAttribute("width", depth4cmRel);   // 0.20 (4 cm in profondità)
+      straightSide.setAttribute("height", planeHeight);   // 1.0 (20 cm in altezza)
       straightSide.setAttribute("position", `${sideCenterX.toFixed(4)} 0 ${stripCenterZ.toFixed(4)}`);
+      straightSide.setAttribute("rotation", "0 90 0");
       straightSide.setAttribute("material", `
         src: url(${sideTexture}); 
         transparent: true; 
