@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Geometria Corretta 20x4cm</title>
+  <title>Diorama WebAR - Calcoli Geometrici Corretti (20x4 cm)</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -54,34 +54,30 @@
     document.addEventListener("DOMContentLoaded", () => {
       const targetEntity = document.querySelector("#ar-target");
 
-      function fromTopLeft(xCm, yCm) {
-        return { x: (xCm / 100) - 0.5, y: 0.5 - (yCm / 100) };
-      }
-
       // ==========================================
       // 1. CONFIGURAZIONE DEI LIVELLI PNG
       // ==========================================
+      // Z=0.32 per Layer05 e Z=0.36 per Layer06 => Distanza esatta = 0.04 (4 cm)
       const layersConfig = [
         { src: "./images/layer01.png", z: 0.00 },
         { src: "./images/layer02.png", z: 0.08 },
         { src: "./images/layer03.png", z: 0.16 },
         { src: "./images/layer04.png", z: 0.24 },
         { src: "./images/layer05.png", z: 0.32, thickness: 0.004 },
-        { src: "./images/layer06.png", z: 0.40 }
+        { src: "./images/layer06.png", z: 0.36 } 
       ];
 
       const extraOverlayPng = "./images/layer05_extra.png";
-      const leafPng = "./images/leaf.png"; 
       const extraOverlayOffsetZ = 0.01; 
 
-      const planeWidth = 1;  // Unità relativa (100% della larghezza target)
+      const planeWidth = 1;  // Rapporto 1:1 con la larghezza target (20 cm)
       const planeHeight = 1;
       const bottomTexture = "./images/box_bottom.png"; 
       const layer05BottomTexture = "./images/layer05_bottom.png"; 
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. BASE GENERALE E LAYER05_BOTTOM (Con extra spicchio 4cm SX)
+      // 2. BASE GENERALE E LAYER05_BOTTOM (Misure: 24cm x 4cm)
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
@@ -101,17 +97,21 @@
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // B) Layer05 Bottom (Tela 24cm x 4cm per ospitare i 20cm base + 4cm di spicchio)
+      // B) Layer05 Bottom (Proporzione A-Frame: 1.2 x 0.2 per rispecchiare i 24cm x 4cm reali)
       const zLayer05 = layersConfig[4].z; // 0.32
-      const stripDepth = 0.04;            // Profondità 4 cm (0.04m)
-      const totalBottomWidth = planeWidth + stripDepth; // 1.04m totale (20cm + 4cm in scala)
-      const stripCenterZ = zLayer05 + (stripDepth / 2); 
+      const zLayer06 = layersConfig[5].z; // 0.36
+      const stripDepthRel = zLayer06 - zLayer05; // 0.04 in unità A-Frame (4 cm)
+      
+      // In proporzione: se 20cm = 1.0, allora 4cm extra a sinistra valgano 0.2 di larghezza A-Frame
+      const extraWidthRel = 0.20; 
+      const totalBottomWidthRel = planeWidth + extraWidthRel; // 1.20
+      const stripCenterZ = zLayer05 + (stripDepthRel / 2); 
 
       const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", totalBottomWidth);
-      layer05BottomPlane.setAttribute("height", stripDepth);
-      // Sfasato a sinistra di mezza misura dello spicchio (-0.02) per allineare i 20cm al box
-      layer05BottomPlane.setAttribute("position", `-0.02 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
+      layer05BottomPlane.setAttribute("width", totalBottomWidthRel);
+      layer05BottomPlane.setAttribute("height", stripDepthRel);
+      // Sfasato a sinistra (-0.10) per allineare la sezione da 1.0 (20cm) al centro e far sporgere i 0.20 (4cm) a SX
+      layer05BottomPlane.setAttribute("position", `-0.10 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
       layer05BottomPlane.setAttribute("rotation", "-90 0 0");
       layer05BottomPlane.setAttribute("material", `
         src: url(${layer05BottomTexture}); 
@@ -125,20 +125,19 @@
       targetEntity.appendChild(layer05BottomPlane);
 
       // ==========================================
-      // 3. RACCORDO CURVO SX (Ripristinato)
+      // 3. RACCORDO CURVO SX (Raggio 4 cm / 0.04)
       // ==========================================
-      const curveRadius = stripDepth; // Raggio 4 cm (0.04m)
-      const wallThickness = 0.004;    // Spessore 4 mm
-      const overlapCorrection = 0.001; // Tolleranza anti-spazi vuoti
+      const curveRadius = stripDepthRel; // 0.04 (4 cm)
+      const wallThickness = 0.004; 
 
-      const curveCenterX = -(planeWidth / 2) + overlapCorrection;
-      const curveCenterZ = zLayer05;
+      const curveCenterX = -(planeWidth / 2);
+      const curveCenterZ = zLayer05 + curveRadius;
 
       // Superficie Curva Esterna
       const outerCurvedSide = document.createElement("a-cylinder");
       outerCurvedSide.setAttribute("radius", curveRadius);
       outerCurvedSide.setAttribute("height", planeHeight);
-      outerCurvedSide.setAttribute("theta-start", 90);
+      outerCurvedSide.setAttribute("theta-start", 180);
       outerCurvedSide.setAttribute("theta-length", 90);
       outerCurvedSide.setAttribute("open-ended", "true");
       outerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
@@ -150,7 +149,7 @@
       const innerCurvedSide = document.createElement("a-cylinder");
       innerCurvedSide.setAttribute("radius", curveRadius - wallThickness);
       innerCurvedSide.setAttribute("height", planeHeight);
-      innerCurvedSide.setAttribute("theta-start", 90);
+      innerCurvedSide.setAttribute("theta-start", 180);
       innerCurvedSide.setAttribute("theta-length", 90);
       innerCurvedSide.setAttribute("open-ended", "true");
       innerCurvedSide.setAttribute("position", `${curveCenterX.toFixed(4)} 0 ${curveCenterZ.toFixed(4)}`);
@@ -159,7 +158,7 @@
       targetEntity.appendChild(innerCurvedSide);
 
       // ==========================================
-      // 4. GENERAZIONE LAYER E ANIMAZIONE FOGLIE MULTIPLE
+      // 4. GENERAZIONE LAYER DIORAMA
       // ==========================================
       layersConfig.forEach((layer, idx) => {
         let element;
@@ -184,7 +183,6 @@
         if (idx === 4) { 
           const overlayZPos = layer.z + extraOverlayOffsetZ;
 
-          // Box Extra Overlay
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
@@ -193,48 +191,6 @@
           overlayBox.setAttribute("material", `src: url(${extraOverlayPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true; side: front;`);
           overlayBox.setAttribute("render-order", 20);
           targetEntity.appendChild(overlayBox);
-
-          // Sistema Foglie Multiple (Cadono e svaniscono sotto il fondo)
-          const totalLeaves = 5;
-          const startCoords = fromTopLeft(0.5, 7.0);   
-          const endCoords   = fromTopLeft(12.3, 22.0); // Y > 20cm fa sparire la foglia dietro la base
-
-          for (let i = 0; i < totalLeaves; i++) {
-            const leaf = document.createElement("a-plane");
-            const randomDelay = i * 800 + Math.random() * 400;
-            const randomDuration = 3200 + Math.random() * 1000;
-            const randomScale = 0.06 + Math.random() * 0.04;
-            const offsetX = (Math.random() - 0.5) * 0.05;
-            const leafZ = overlayZPos + 0.003 + (i * 0.0005);
-
-            leaf.setAttribute("width", randomScale);
-            leaf.setAttribute("height", randomScale);
-            leaf.setAttribute("position", `${(startCoords.x + offsetX).toFixed(4)} ${startCoords.y.toFixed(4)} ${leafZ.toFixed(4)}`);
-            leaf.setAttribute("material", `src: url(${leafPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true;`);
-
-            leaf.setAttribute("animation__pos", `
-              property: position; 
-              from: ${(startCoords.x + offsetX).toFixed(4)} ${startCoords.y.toFixed(4)} ${leafZ.toFixed(4)}; 
-              to: ${(endCoords.x + offsetX).toFixed(4)} ${endCoords.y.toFixed(4)} ${leafZ.toFixed(4)}; 
-              dur: ${randomDuration}; 
-              delay: ${randomDelay};
-              easing: easeInQuad; 
-              loop: true;
-            `);
-
-            leaf.setAttribute("animation__rot", `
-              property: rotation; 
-              from: 0 0 ${-20 + Math.random() * 10}; 
-              to: 0 0 ${30 + Math.random() * 20}; 
-              dur: ${1200 + Math.random() * 600}; 
-              dir: alternate; 
-              easing: easeInOutSine; 
-              loop: true;
-            `);
-
-            leaf.setAttribute("render-order", 21);
-            targetEntity.appendChild(leaf);
-          }
         }
       });
     });
