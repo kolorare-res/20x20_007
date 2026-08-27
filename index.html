@@ -55,40 +55,44 @@
       const targetEntity = document.querySelector("#ar-target");
 
       // ==========================================
-      // 1. CONFIGURAZIONE DEI LIVELLI PNG
+      // 1. CONFIGURAZIONE DEI LIVELLI PNG (3 mm = 0.015 unità A-Frame)
       // ==========================================
-      // La distanza tra Layer 05 e Layer 06 deve essere di 0.20 unità per corrispondere a 4 cm
+      const thickness3mm = 0.015; // 3 mm reali (0.015 unità A-Frame)
+
+      // Distribuzione dei layer per coprire esattamente 1.0 unità (20 cm reali)
+      // Faccia posteriore Layer 01 a Z=0.0000 -> Faccia anteriore Layer 06 a Z=1.0000
       const layersConfig = [
-        { src: "./images/layer01.png", z: 0.00 },
-        { src: "./images/layer02.png", z: 0.08 },
-        { src: "./images/layer03.png", z: 0.16 },
-        { src: "./images/layer04.png", z: 0.24 },
-        { src: "./images/layer05.png", z: 0.32, thickness: 0.004 },
-        { src: "./images/layer06.png", z: 0.52 } // Z = 0.32 + 0.20 (4 cm)
+        { src: "./images/layer01.png", z: 0.0075, thickness: thickness3mm }, // Aderente al target
+        { src: "./images/layer02.png", z: 0.2000, thickness: thickness3mm },
+        { src: "./images/layer03.png", z: 0.3925, thickness: thickness3mm },
+        { src: "./images/layer04.png", z: 0.5850, thickness: thickness3mm },
+        { src: "./images/layer05.png", z: 0.7775, thickness: thickness3mm }, // Faccia frontale a Z = 0.7850
+        { src: "./images/layer06.png", z: 0.9925, thickness: thickness3mm }  // Faccia frontale a Z = 1.0000 (20 cm)
       ];
 
       const extraOverlayPng = "./images/layer05_extra.png";
-      const extraOverlayOffsetZ = 0.01; 
+      // Offset per collocare l'Extra subito dopo la faccia frontale di Layer 05
+      const extraOverlayOffsetZ = 0.0151; 
 
-      const planeWidth = 1;  // 1.0 unità = 20 cm reali
-      const planeHeight = 1; // 1.0 unità = 20 cm reali
-      
-      // 4 cm reali in scala A-Frame (4 / 20 = 0.20)
-      const depth4cmRel = 0.20; 
+      const planeWidth = 1.0;   // 1.0 unità = 20 cm reali
+      const planeHeight = 1.0;  // 1.0 unità = 20 cm reali
+      const depth4cmRel = 0.20; // 4 cm reali (0.20 unità)
 
       const bottomTexture = "./images/box_bottom.png"; 
       const layer05BottomTexture = "./images/layer05_bottom.png"; 
       const sideTexture = "./images/layer05-box_side.png"; 
 
       // ==========================================
-      // 2. BASE GENERALE E LAYER05_BOTTOM (1024x204 px -> 20x4 cm)
+      // 2. BASE GENERALE E LAYER05_BOTTOM (20x4 cm)
       // ==========================================
       const overlapZ = -0.01; 
       const frontMargin = 0.005; 
-      const zBack = layersConfig[0].z + overlapZ; 
-      const zFront = layersConfig[layersConfig.length - 1].z + frontMargin; 
-      const bottomLengthExact = zFront - zBack; 
-      const bottomCenterZExact = zBack + (bottomLengthExact / 2); 
+      
+      const zBack = (layersConfig[0].z - thickness3mm / 2) + overlapZ; // -0.0100
+      const zFront = (layersConfig[layersConfig.length - 1].z + thickness3mm / 2) + frontMargin; // 1.0050
+      
+      const bottomLengthExact = zFront - zBack; // 1.0150 unità
+      const bottomCenterZExact = zBack + (bottomLengthExact / 2); // 0.4975
       const bottomYPos = -(planeHeight / 2 + 0.001);
 
       // A) Piano Base generale (box_bottom.png)
@@ -101,14 +105,14 @@
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
-      // B) Layer05 Bottom (Misure in scala: 1.0 x 0.20)
-      const zLayer05 = layersConfig[4].z; // 0.32
-      const stripCenterZ = zLayer05 + (depth4cmRel / 2); // 0.32 + 0.10 = 0.42
+      // B) Layer05 Bottom (Striscia 4 cm di profondità tra Layer 05 e Layer 06)
+      const zLayer05Front = layersConfig[4].z + (thickness3mm / 2); // 0.7850
+      const stripCenterZ = zLayer05Front + (depth4cmRel / 2); // 0.8850
 
       const layer05BottomPlane = document.createElement("a-plane");
-      layer05BottomPlane.setAttribute("width", planeWidth);      // 1.0 (20 cm)
-      layer05BottomPlane.setAttribute("height", depth4cmRel);     // 0.20 (4 cm)
-      layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.0005).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
+      layer05BottomPlane.setAttribute("width", planeWidth);
+      layer05BottomPlane.setAttribute("height", depth4cmRel);
+      layer05BottomPlane.setAttribute("position", `0 ${(bottomYPos + 0.001).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
       layer05BottomPlane.setAttribute("rotation", "-90 0 0");
       layer05BottomPlane.setAttribute("material", `
         src: url(${layer05BottomTexture}); 
@@ -122,13 +126,13 @@
       targetEntity.appendChild(layer05BottomPlane);
 
       // ==========================================
-      // 3. PARETE LATERALE PERPENDICOLARE SX (204x1024 px -> 4x20 cm)
+      // 3. PARETE LATERALE PERPENDICOLARE SX (4x20 cm)
       // ==========================================
       const sideCenterX = -(planeWidth / 2); // -0.5 (bordo sinistro)
 
       const straightSide = document.createElement("a-plane");
-      straightSide.setAttribute("width", depth4cmRel);   // 0.20 (4 cm in profondità)
-      straightSide.setAttribute("height", planeHeight);   // 1.0 (20 cm in altezza)
+      straightSide.setAttribute("width", depth4cmRel);   // 0.20 (4 cm)
+      straightSide.setAttribute("height", planeHeight);  // 1.00 (20 cm)
       straightSide.setAttribute("position", `${sideCenterX.toFixed(4)} 0 ${stripCenterZ.toFixed(4)}`);
       straightSide.setAttribute("rotation", "0 90 0");
       straightSide.setAttribute("material", `
@@ -142,35 +146,25 @@
       targetEntity.appendChild(straightSide);
 
       // ==========================================
-      // 4. GENERAZIONE LAYER DIORAMA
+      // 4. GENERAZIONE LAYER DIORAMA (Spessore 3 mm)
       // ==========================================
       layersConfig.forEach((layer, idx) => {
-        let element;
-        if (layer.thickness) {
-          element = document.createElement("a-box");
-          element.setAttribute("width", planeWidth);
-          element.setAttribute("height", planeHeight);
-          element.setAttribute("depth", layer.thickness); 
-          element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
-          element.setAttribute("material", `src: url(${layer.src}); transparent: true; alphaTest: 0.01; side: front; depthTest: true;`);
-        } else {
-          element = document.createElement("a-plane");
-          element.setAttribute("src", layer.src);
-          element.setAttribute("width", planeWidth);
-          element.setAttribute("height", planeHeight);
-          element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
-          element.setAttribute("material", `transparent: true; alphaTest: 0.01; side: front; depthTest: true;`);
-        }
+        const element = document.createElement("a-box");
+        element.setAttribute("width", planeWidth);
+        element.setAttribute("height", planeHeight);
+        element.setAttribute("depth", layer.thickness); 
+        element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
+        element.setAttribute("material", `src: url(${layer.src}); transparent: true; alphaTest: 0.01; side: front; depthTest: true;`);
         element.setAttribute("render-order", 10 + idx);
         targetEntity.appendChild(element);
 
         if (idx === 4) { 
-          const overlayZPos = layer.z + extraOverlayOffsetZ;
+          const overlayZPos = layer.z + extraOverlayOffsetZ; // 0.7775 + 0.0151 = 0.7926
 
           const overlayBox = document.createElement("a-box");
           overlayBox.setAttribute("width", planeWidth);
           overlayBox.setAttribute("height", planeHeight);
-          overlayBox.setAttribute("depth", 0.004); 
+          overlayBox.setAttribute("depth", thickness3mm); 
           overlayBox.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
           overlayBox.setAttribute("material", `src: url(${extraOverlayPng}); transparent: true; alphaTest: 0.01; depthWrite: false; depthTest: true; side: front;`);
           overlayBox.setAttribute("render-order", 20);
