@@ -68,14 +68,14 @@
     document.addEventListener("DOMContentLoaded", () => {
       const targetEntity = document.querySelector("#ar-target");
 
-      // Regole materiali trasparenti senza aloni e visibili da qualsiasi angolazione
+      // Regole materiali trasparenti puliti
       const cleanAlphaMat = "transparent: true; alphaTest: 0.5; depthWrite: true; depthTest: true;";
       const overlayMat = "transparent: true; alphaTest: 0.1; depthWrite: false; depthTest: true;";
 
       // ==========================================
       // 1. CONFIGURAZIONE DEI LIVELLI PNG
       // ==========================================
-      const thickness3mm = 0.015; // 3 mm teorici di intervallo spaziale
+      const thickness3mm = 0.015; // 3 mm teorici
       const planeWidth = 1.0;     // 1.0 unità = 20 cm reali
       const planeHeight = 1.0;    // 1.0 unità = 20 cm reali
       const depth4cmRel = 0.20;   // 4 cm reali (0.20 unità)
@@ -87,7 +87,6 @@
           src: "./images/layer03.png", 
           z: 0.3925, 
           bottomTexture: "./images/layer03_bottom.png",
-          // Extra Layer 03 distanziato di 1.0 cm (+0.0500 unità) verso lo spettatore
           extraOverlay: {
             src: "./images/layer03_extra.png",
             offsetZ: 0.0500
@@ -98,10 +97,18 @@
           z: 0.5850, 
           bottomTexture: "./images/layer04_bottom.png",
           topTexture: "./images/layer04_top.png",
-          topYPos: -0.0500, // Piano intermedio 11 cm dall'alto (-1 cm dal centro)
+          topYPos: -0.0500, // Piano intermedio acqua (-1 cm dal centro)
           extraOverlay: {
             src: "./images/layer04_extra.png",
-            offsetZ: 0.0900 // Distanziato di 1.5 cm (+0.075 unità)
+            offsetZ: 0.0750
+          },
+          // Configurazione Barca Animata (Full Dimension 1.0 x 1.0)
+          boat: {
+            src: "./images/paper_boat.png",
+            offsetZ: 0.0750,  // Stessa profondità Z di layer04_extra
+            startYPos: 0.0,   // Canvas centrato
+            width: 1.0,       // Dimensioni identiche ai layer
+            height: 1.0
           }
         },
         { 
@@ -109,7 +116,6 @@
           z: 0.7775, 
           bottomTexture: "./images/layer05_bottom.png",
           customDepth: depth4cmRel,
-          // Extra Layer 05 distanziato di 0.5 cm (+0.0250 unità) verso lo spettatore
           extraOverlay: {
             src: "./images/layer05_extra.png",
             offsetZ: 0.0500
@@ -173,7 +179,7 @@
             targetEntity.appendChild(bPlane);
           }
 
-          // Piano Top specifico (presente solo dove dichiarato, es. Layer 04)
+          // Piano Top specifico (Acqua Layer 04)
           if (layer.topTexture && layer.topYPos !== undefined) {
             const tPlane = document.createElement("a-plane");
             tPlane.setAttribute("width", planeWidth);
@@ -229,6 +235,47 @@
           overlayElement.setAttribute("material", `src: url(${layer.extraOverlay.src}); ${overlayMat} side: double;`);
           overlayElement.setAttribute("render-order", 40 + (idx * 2) + 1);
           targetEntity.appendChild(overlayElement);
+        }
+
+        // ==========================================
+        // 6. ANIMAZIONE BARCHETTA DI CARTA (GALLEGGIAMENTO)
+        // ==========================================
+        if (layer.boat) {
+          const boatZPos = layer.z + layer.boat.offsetZ + 0.002; // Leggermente davanti per evitare Z-fighting
+          const startY = layer.boat.startYPos;
+          const floatRange = 0.010; // Oscillazione verticale uniforme
+
+          const boatElement = document.createElement("a-plane");
+          boatElement.setAttribute("width", layer.boat.width);
+          boatElement.setAttribute("height", layer.boat.height);
+          boatElement.setAttribute("position", `0 ${startY.toFixed(4)} ${boatZPos.toFixed(4)}`);
+          boatElement.setAttribute("fix-png-alpha", "");
+          boatElement.setAttribute("material", `src: url(${layer.boat.src}); ${overlayMat} side: double;`);
+          boatElement.setAttribute("render-order", 40 + (idx * 2) + 2);
+
+          // Animazione 1: Oscillazione Su e Giù
+          boatElement.setAttribute("animation__float", {
+            property: "position",
+            from: `0 ${startY} ${boatZPos.toFixed(4)}`,
+            to: `0 ${(startY + floatRange).toFixed(4)} ${boatZPos.toFixed(4)}`,
+            dir: "alternate",
+            dur: 2000,
+            easing: "easeInOutSine",
+            loop: true
+          });
+
+          // Animazione 2: Rollio dell'Onda (Leggera inclinazione)
+          boatElement.setAttribute("animation__rock", {
+            property: "rotation",
+            from: "0 0 -2.5",
+            to: "0 0 2.5",
+            dir: "alternate",
+            dur: 2400,
+            easing: "easeInOutSine",
+            loop: true
+          });
+
+          targetEntity.appendChild(boatElement);
         }
       });
     });
