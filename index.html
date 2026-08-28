@@ -49,27 +49,27 @@
     // ==========================================
     AFRAME.registerComponent('falling-particles', {
       schema: {
-        count: { type: 'int', default: 15 },
+        count: { type: 'int', default: 22 },
         textures: { type: 'array', default: [] },
         zPos: { type: 'number', default: 0.8025 },
         baseSizeMin: { type: 'number', default: 0.010 },
         baseSizeMax: { type: 'number', default: 0.030 },
         fallSpeedMin: { type: 'number', default: 0.0005 },
         fallSpeedMax: { type: 'number', default: 0.0009 },
-        swayAmp: { type: 'number', default: 0.020 },
+        swayAmp: { type: 'number', default: 0.025 },
         enable3DRotation: { type: 'boolean', default: true }
       },
 
       init: function () {
         this.particles = [];
         
-        // Limiti Spaziali (X: 2cm a 7.5cm | Y: 3.5cm a 9cm)
+        // --- LIMITI SPAZIALI AMPLIATI ---
         this.bounds = {
-          xMin: -0.400,  // 2 cm dal bordo SX
-          xMax: -0.125,  // 7.5 cm dal bordo SX
-          yMin: -0.325,  // 3.5 cm dal fondo
-          yMax: -0.050,  // 9 cm dal fondo
-          yKill: -0.600  // Oltre il fondo del box (-12 cm)
+          xMin: -0.480,  // Esteso più a sinistra (fino al bordo esterno)
+          xMax: -0.100,  // Esteso leggermente verso il centro
+          yMin: -0.325,  // Limite inferiore visibile
+          yMax: 0.150,   // Alzato in alto (spazio di generazione sopra la scena)
+          yKill: -0.600  // Punto di reset oltre il fondo
         };
 
         const overlayMat = "transparent: true; alphaTest: 0.1; depthWrite: false; depthTest: true;";
@@ -377,20 +377,20 @@
       // 6. GENERATORE UNIFICATO PARTICELLE (Foglie e Lettere)
       // ==========================================
       const particleTextures = [];
-      for (let i = 11; i <= 25; i++) {
+      for (let i = 11; i <= 28; i++) {
         particleTextures.push(`./images/layer05-${i}.png`);
       }
 
       const particlesContainer = document.createElement("a-entity");
       particlesContainer.setAttribute("falling-particles", {
-        count: 18,
+        count: 22,
         textures: particleTextures,
         zPos: 0.8025,
         baseSizeMin: 0.010,
         baseSizeMax: 0.030,
         fallSpeedMin: 0.0005,
         fallSpeedMax: 0.0009,
-        swayAmp: 0.020,
+        swayAmp: 0.025,
         enable3DRotation: true
       });
       targetEntity.appendChild(particlesContainer);
