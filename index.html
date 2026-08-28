@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diorama WebAR - Animazione Foglie e Lettere Cadenti</title>
+  <title>Diorama WebAR - Animazione Particelle (Foglie e Lettere)</title>
 
   <!-- Librerie A-Frame e MindAR -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -45,18 +45,17 @@
     });
 
     // ==========================================
-    // COMPONENTE UNIVERSALE PARTICELLE CADENTI
-    // (Gestisce sia Foglie che Tipografia)
+    // COMPONENTE PARTICELLE CADENTI
     // ==========================================
     AFRAME.registerComponent('falling-particles', {
       schema: {
-        count: { type: 'int', default: 8 },
+        count: { type: 'int', default: 15 },
         textures: { type: 'array', default: [] },
         zPos: { type: 'number', default: 0.8025 },
-        baseSizeMin: { type: 'number', default: 0.060 },
-        baseSizeMax: { type: 'number', default: 0.090 },
-        fallSpeedMin: { type: 'number', default: 0.0006 },
-        fallSpeedMax: { type: 'number', default: 0.0010 },
+        baseSizeMin: { type: 'number', default: 0.010 },
+        baseSizeMax: { type: 'number', default: 0.030 },
+        fallSpeedMin: { type: 'number', default: 0.0005 },
+        fallSpeedMax: { type: 'number', default: 0.0009 },
         swayAmp: { type: 'number', default: 0.020 },
         enable3DRotation: { type: 'boolean', default: true }
       },
@@ -64,7 +63,7 @@
       init: function () {
         this.particles = [];
         
-        // Limiti Spaziali derivati dai cm reali (X: 2cm a 7.5cm | Y: 3.5cm a 9cm)
+        // Limiti Spaziali (X: 2cm a 7.5cm | Y: 3.5cm a 9cm)
         this.bounds = {
           xMin: -0.400,  // 2 cm dal bordo SX
           xMax: -0.125,  // 7.5 cm dal bordo SX
@@ -78,16 +77,14 @@
         for (let i = 0; i < this.data.count; i++) {
           const pEl = document.createElement('a-plane');
           
-          // Selezione casuale della texture caricata nell'array
           const randTex = this.data.textures[Math.floor(Math.random() * this.data.textures.length)];
-          
-          // Variazione dimensione casuale nell'intervallo specificato
           const size = this.data.baseSizeMin + (Math.random() * (this.data.baseSizeMax - this.data.baseSizeMin));
+          
           pEl.setAttribute('width', size);
           pEl.setAttribute('height', size);
           pEl.setAttribute('fix-png-alpha', '');
           pEl.setAttribute('material', `src: url(${randTex}); ${overlayMat} side: double;`);
-          pEl.setAttribute('render-order', 45); // Posizionato fisicamente tra i due layer degli alberi
+          pEl.setAttribute('render-order', 45);
 
           this.el.appendChild(pEl);
 
@@ -119,7 +116,7 @@
       resetParticle: function (p) {
         p.xInit = this.randomRange(this.bounds.xMin, this.bounds.xMax);
         p.x = p.xInit;
-        p.y = this.bounds.yMax; // Riparte dall'alto
+        p.y = this.bounds.yMax;
         p.fallSpeed = this.randomRange(this.data.fallSpeedMin, this.data.fallSpeedMax);
         p.rotZ = Math.random() * 360;
       },
@@ -135,20 +132,19 @@
           const sway = Math.sin((time + p.timeOffset) * p.swayFreq) * p.swayAmp;
           p.x = p.xInit + sway;
 
-          // 3. Rotazione Organica
+          // 3. Rotazione
           p.rotZ += p.rotSpeedZ;
           if (this.data.enable3DRotation) {
             p.rotX += p.rotSpeedX;
           }
 
-          // Applicazione Posizione e Rotazione al mesh Three.js
           p.el.object3D.position.set(p.x, p.y, p.z);
           p.el.object3D.rotation.z = THREE.MathUtils.degToRad(p.rotZ);
           if (this.data.enable3DRotation) {
             p.el.object3D.rotation.x = THREE.MathUtils.degToRad(p.rotX);
           }
 
-          // 4. Reset quando la particella supera il fondo del box
+          // 4. Reset a fine corsa
           if (p.y < this.bounds.yKill) {
             this.resetParticle(p);
           }
@@ -378,46 +374,26 @@
       });
 
       // ==========================================
-      // 6A. GENERATORE FOGLIE CADENTI (4 Grafiche)
+      // 6. GENERATORE UNIFICATO PARTICELLE (Foglie e Lettere)
       // ==========================================
-      const leavesContainer = document.createElement("a-entity");
-      leavesContainer.setAttribute("falling-particles", {
-        count: 12, // 12 foglie totali a schermo
-        textures: [
-          "./images/leaf1.png",
-          "./images/leaf2.png",
-          "./images/leaf3.png",
-          "./images/leaf4.png"
-        ],
-        zPos: 0.8025,
-        baseSizeMin: 0.060,
-        baseSizeMax: 0.090,
-        fallSpeedMin: 0.0006,
-        fallSpeedMax: 0.0010,
-        swayAmp: 0.025,        // Oscillazione mossa
-        enable3DRotation: true // Rotazione 3D per effetto foglia
-      });
-      targetEntity.appendChild(leavesContainer);
+      const particleTextures = [];
+      for (let i = 11; i <= 25; i++) {
+        particleTextures.push(`./images/layer05-${i}.png`);
+      }
 
-      // ==========================================
-      // 6B. GENERATORE LETTERE TIPOGRAFICHE (2 Grafiche)
-      // ==========================================
-      const lettersContainer = document.createElement("a-entity");
-      lettersContainer.setAttribute("falling-particles", {
-        count: 4,  // 4 lettere totali a schermo per non affollare
-        textures: [
-          "./images/letter_F.png",
-          "./images/letter_A.png"
-        ],
+      const particlesContainer = document.createElement("a-entity");
+      particlesContainer.setAttribute("falling-particles", {
+        count: 18,
+        textures: particleTextures,
         zPos: 0.8025,
-        baseSizeMin: 0.065,
-        baseSizeMax: 0.085,
-        fallSpeedMin: 0.0008,
-        fallSpeedMax: 0.0012,
-        swayAmp: 0.008,         // Oscillazione minima
-        enable3DRotation: false // Sempre frontali e ben leggibili
+        baseSizeMin: 0.010,
+        baseSizeMax: 0.030,
+        fallSpeedMin: 0.0005,
+        fallSpeedMax: 0.0009,
+        swayAmp: 0.020,
+        enable3DRotation: true
       });
-      targetEntity.appendChild(lettersContainer);
+      targetEntity.appendChild(particlesContainer);
 
     });
   </script>
