@@ -68,53 +68,54 @@
     document.addEventListener("DOMContentLoaded", () => {
       const targetEntity = document.querySelector("#ar-target");
 
-      // Regole materiali: depthWrite TRUE per i layer principali per ordinamento corretto
-      const layerMaterial = "transparent: true; alphaTest: 0.5; depthWrite: true; depthTest: true;";
-      const overlayMaterial = "transparent: true; alphaTest: 0.5; depthWrite: false; depthTest: true;";
+      // Regole materiali trasparenti senza aloni e visibili da qualsiasi angolazione
+      const cleanAlphaMat = "transparent: true; alphaTest: 0.5; depthWrite: true; depthTest: true;";
+      const overlayMat = "transparent: true; alphaTest: 0.1; depthWrite: false; depthTest: true;";
 
       // ==========================================
-      // 1. CONFIGURAZIONE DEI LIVELLI PNG (3 mm = 0.015 unità A-Frame)
+      // 1. CONFIGURAZIONE DEI LIVELLI PNG
       // ==========================================
-      const thickness3mm = 0.015; 
-      const planeWidth = 1.0;     
-      const planeHeight = 1.0;    
-      const depth4cmRel = 0.20;   
+      const thickness3mm = 0.015; // 3 mm teorici di intervallo spaziale
+      const planeWidth = 1.0;     // 1.0 unità = 20 cm reali
+      const planeHeight = 1.0;    // 1.0 unità = 20 cm reali
+      const depth4cmRel = 0.20;   // 4 cm reali (0.20 unità)
 
       const layersConfig = [
-        { src: "./images/layer01.png", z: 0.0075, thickness: thickness3mm },
-        { src: "./images/layer02.png", z: 0.2000, thickness: thickness3mm },
+        { src: "./images/layer01.png", z: 0.0075 },
+        { src: "./images/layer02.png", z: 0.2000 },
         { 
           src: "./images/layer03.png", 
           z: 0.3925, 
-          thickness: thickness3mm,
           bottomTexture: "./images/layer03_bottom.png",
-          topTexture: "./images/layer03_top.png",
-          topYPos: -0.1000 // Piano intermedio (modifica questo valore per regolare l'altezza Y)
+          // Extra Layer 03 distanziato di 1.0 cm (+0.0500 unità) verso lo spettatore
+          extraOverlay: {
+            src: "./images/layer03_extra.png",
+            offsetZ: 0.0500
+          }
         },
         { 
           src: "./images/layer04.png", 
           z: 0.5850, 
-          thickness: thickness3mm,
           bottomTexture: "./images/layer04_bottom.png",
           topTexture: "./images/layer04_top.png",
-          topYPos: -0.0500, // 11 cm dall'alto (-1 cm dal centro)
+          topYPos: -0.0500, // Piano intermedio 11 cm dall'alto (-1 cm dal centro)
           extraOverlay: {
             src: "./images/layer04_extra.png",
-            offsetZ: 0.0900 // Distanziato di 1.5 cm
+            offsetZ: 0.0900 // Distanziato di 1.5 cm (+0.075 unità)
           }
         },
         { 
           src: "./images/layer05.png", 
           z: 0.7775, 
-          thickness: thickness3mm,
           bottomTexture: "./images/layer05_bottom.png",
           customDepth: depth4cmRel,
+          // Extra Layer 05 distanziato di 0.5 cm (+0.0250 unità) verso lo spettatore
           extraOverlay: {
             src: "./images/layer05_extra.png",
-            offsetZ: 0.0151
+            offsetZ: 0.0250
           }
         },
-        { src: "./images/layer06.png", z: 0.9925, thickness: thickness3mm }
+        { src: "./images/layer06.png", z: 0.9925 }
       ];
 
       const bottomTexture = "./images/box_bottom.png"; 
@@ -139,7 +140,7 @@
       bottomPlane.setAttribute("position", `0 ${bottomYPos.toFixed(4)} ${bottomCenterZExact.toFixed(4)}`);
       bottomPlane.setAttribute("rotation", "-90 0 0");
       bottomPlane.setAttribute("fix-png-alpha", "");
-      bottomPlane.setAttribute("material", `src: url(${bottomTexture}); ${overlayMaterial} side: double;`);
+      bottomPlane.setAttribute("material", `src: url(${bottomTexture}); ${cleanAlphaMat} side: double;`);
       bottomPlane.setAttribute("render-order", 1);
       targetEntity.appendChild(bottomPlane);
 
@@ -150,17 +151,16 @@
         const nextLayer = layersConfig[idx + 1];
 
         if (layer.bottomTexture || layer.topTexture) {
-          const zCurrentFront = layer.z + (thickness3mm / 2);
+          const zCurrentFront = layer.z;
           
           let stripDepth = layer.customDepth;
           if (!stripDepth && nextLayer) {
-            const zNextBack = nextLayer.z - (thickness3mm / 2);
-            stripDepth = zNextBack - zCurrentFront;
+            stripDepth = nextLayer.z - zCurrentFront;
           }
 
           const stripCenterZ = zCurrentFront + (stripDepth / 2);
 
-          // Piano di Fondo specifico per il Layer
+          // Piano Bottom specifico
           if (layer.bottomTexture) {
             const bPlane = document.createElement("a-plane");
             bPlane.setAttribute("width", planeWidth);
@@ -168,12 +168,12 @@
             bPlane.setAttribute("position", `0 ${(bottomYPos + 0.001 + (idx * 0.0005)).toFixed(4)} ${stripCenterZ.toFixed(4)}`);
             bPlane.setAttribute("rotation", "-90 0 0");
             bPlane.setAttribute("fix-png-alpha", "");
-            bPlane.setAttribute("material", `src: url(${layer.bottomTexture}); ${overlayMaterial} side: double;`);
-            bPlane.setAttribute("render-order", 2 + idx);
+            bPlane.setAttribute("material", `src: url(${layer.bottomTexture}); ${cleanAlphaMat} side: double;`);
+            bPlane.setAttribute("render-order", 5 + idx);
             targetEntity.appendChild(bPlane);
           }
 
-          // Piano Superiore / Intermedio specifico per il Layer
+          // Piano Top specifico (presente solo dove dichiarato, es. Layer 04)
           if (layer.topTexture && layer.topYPos !== undefined) {
             const tPlane = document.createElement("a-plane");
             tPlane.setAttribute("width", planeWidth);
@@ -181,8 +181,8 @@
             tPlane.setAttribute("position", `0 ${layer.topYPos.toFixed(4)} ${stripCenterZ.toFixed(4)}`);
             tPlane.setAttribute("rotation", "-90 0 0");
             tPlane.setAttribute("fix-png-alpha", "");
-            tPlane.setAttribute("material", `src: url(${layer.topTexture}); ${overlayMaterial} side: double;`);
-            tPlane.setAttribute("render-order", 4 + idx);
+            tPlane.setAttribute("material", `src: url(${layer.topTexture}); ${cleanAlphaMat} side: double;`);
+            tPlane.setAttribute("render-order", 15 + idx);
             targetEntity.appendChild(tPlane);
           }
         }
@@ -192,8 +192,7 @@
       // 4. PARETE LATERALE PERPENDICOLARE SX
       // ==========================================
       const sideCenterX = -(planeWidth / 2);
-      const zLayer05Front = layersConfig[4].z + (thickness3mm / 2);
-      const strip05CenterZ = zLayer05Front + (depth4cmRel / 2);
+      const strip05CenterZ = layersConfig[4].z + (depth4cmRel / 2);
 
       const straightSide = document.createElement("a-plane");
       straightSide.setAttribute("width", depth4cmRel);   
@@ -201,27 +200,21 @@
       straightSide.setAttribute("position", `${sideCenterX.toFixed(4)} 0 ${strip05CenterZ.toFixed(4)}`);
       straightSide.setAttribute("rotation", "0 90 0");
       straightSide.setAttribute("fix-png-alpha", "");
-      straightSide.setAttribute("material", `src: url(${sideTexture}); ${overlayMaterial} side: double;`);
-      straightSide.setAttribute("render-order", 15);
+      straightSide.setAttribute("material", `src: url(${sideTexture}); ${cleanAlphaMat} side: double;`);
+      straightSide.setAttribute("render-order", 30);
       targetEntity.appendChild(straightSide);
 
       // ==========================================
-      // 5. GENERAZIONE LAYER DIORAMA CON A-PLANE (Niente spessori mappati male)
+      // 5. GENERAZIONE LAYER DIORAMA (2D A-PLANE)
       // ==========================================
       layersConfig.forEach((layer, idx) => {
-        // PER RIPRISTINARE I BOX 3D: Sostituire "a-plane" con "a-box" e decommentare l'attribute depth.
         const element = document.createElement("a-plane");
         element.setAttribute("width", planeWidth);
         element.setAttribute("height", planeHeight);
-        // element.setAttribute("depth", layer.thickness); // Usato se a-box
-        
-        // Posizioniamo il piano sulla faccia frontale esatta del layer
-        const frontZ = layer.z + (layer.thickness / 2);
-        element.setAttribute("position", `0 0 ${frontZ.toFixed(4)}`);
-        
+        element.setAttribute("position", `0 0 ${layer.z.toFixed(4)}`);
         element.setAttribute("fix-png-alpha", "");
-        element.setAttribute("material", `src: url(${layer.src}); ${layerMaterial} side: double;`);
-        element.setAttribute("render-order", 10 + idx);
+        element.setAttribute("material", `src: url(${layer.src}); ${cleanAlphaMat} side: double;`);
+        element.setAttribute("render-order", 40 + (idx * 2));
         targetEntity.appendChild(element);
 
         // Overlay Extra (se presente)
@@ -231,11 +224,10 @@
           const overlayElement = document.createElement("a-plane");
           overlayElement.setAttribute("width", planeWidth);
           overlayElement.setAttribute("height", planeHeight);
-          // overlayElement.setAttribute("depth", thickness3mm); // Usato se a-box
           overlayElement.setAttribute("position", `0 0 ${overlayZPos.toFixed(4)}`);
           overlayElement.setAttribute("fix-png-alpha", "");
-          overlayElement.setAttribute("material", `src: url(${layer.extraOverlay.src}); ${overlayMaterial} side: double;`);
-          overlayElement.setAttribute("render-order", 20 + idx);
+          overlayElement.setAttribute("material", `src: url(${layer.extraOverlay.src}); ${overlayMat} side: double;`);
+          overlayElement.setAttribute("render-order", 40 + (idx * 2) + 1);
           targetEntity.appendChild(overlayElement);
         }
       });
